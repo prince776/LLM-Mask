@@ -5,6 +5,7 @@ import (
 	"llmmask/src/common"
 	"llmmask/src/db"
 	"llmmask/src/log"
+	"llmmask/src/secrets"
 	"llmmask/src/svc"
 	"os"
 )
@@ -12,6 +13,7 @@ import (
 func Init(ctx context.Context) {
 	log.Init()
 	db.Init(ctx)
+	secrets.Init(ctx)
 	common.InitGlobalSemaphoreManager()
 	log.Infof(ctx, "Initialization Done!")
 }

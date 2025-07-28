@@ -15,7 +15,7 @@ func (s *Service) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	render.Render(w, r, Ok200(user))
 }
 
-func (svc *Service) getUserFromContext(ctx context.Context) *models.User {
+func (s *Service) getUserFromContext(ctx context.Context) *models.User {
 	user, ok := ctx.Value(userContextKey).(*models.User)
 	common.Assert(ok, "user not in context")
 	return user

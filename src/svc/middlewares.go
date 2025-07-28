@@ -18,7 +18,7 @@ type contextKey string
 const userContextKey contextKey = "authenticatedUser"
 const userSessionIDCtxKey contextKey = "authenticatedUserSessionID"
 
-func (svc *Service) AuthMiddleware(next http.Handler) http.Handler {
+func (s *Service) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(sessionKeyInCookie)
 		if err != nil && !errors.Is(err, http.ErrNoCookie) {
@@ -27,7 +27,7 @@ func (svc *Service) AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		sessionID := cookie.Value
-		user, err := svc.getUserFromSession(r.Context(), sessionID)
+		user, err := s.getUserFromSession(r.Context(), sessionID)
 		if err != nil || user == nil {
 			render.Render(w, r, ErrUnauthorized(errors.Wrapf(err, "failed to get user form session")))
 			return
@@ -39,7 +39,7 @@ func (svc *Service) AuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (svc *Service) SemaphoreMiddleware(semaphoreConf *common.SemaphoreConf) func(http.Handler) http.Handler {
+func (s *Service) SemaphoreMiddleware(semaphoreConf *common.SemaphoreConf) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -55,7 +55,7 @@ func (svc *Service) SemaphoreMiddleware(semaphoreConf *common.SemaphoreConf) fun
 	}
 }
 
-func (svc *Service) getUserFromSession(ctx context.Context, sessionID string) (*models.User, error) {
+func (s *Service) getUserFromSession(ctx context.Context, sessionID string) (*models.User, error) {
 	userSession := &models.UserSession{
 		DocID: sessionID,
 	}
@@ -64,14 +64,14 @@ func (svc *Service) getUserFromSession(ctx context.Context, sessionID string) (*
 		return nil, err
 	}
 
-	user, err := svc.getUserFromDocID(ctx, userSession.UserDocID)
+	user, err := s.getUserFromDocID(ctx, userSession.UserDocID)
 	if err != nil {
 		return nil, err
 	}
 	return user, nil
 }
 
-func (svc *Service) getUserFromDocID(ctx context.Context, docID string) (*models.User, error) {
+func (s *Service) getUserFromDocID(ctx context.Context, docID string) (*models.User, error) {
 	user := &models.User{}
 	err := models.Fetch(ctx, user)
 	if err != nil {

@@ -71,6 +71,8 @@ func (s *Service) Run() {
 	r.Get("/health", s.health)
 
 	r.Route("/api/v1", func(r chi.Router) {
+		// These apis will not be needed for relay servers. Really only needed for the api-server users interact
+		// for normal operations, not the core LLM Interaction.
 		r.Route("/users", func(r chi.Router) {
 			r.Get("/signin", s.UserSignInHandler)
 			r.Get("/grantGCP/callback", s.UserOAuthCallbackHandler)
@@ -83,6 +85,12 @@ func (s *Service) Run() {
 		r.Route("/", func(r chi.Router) {
 			r.Use(s.AuthMiddleware)
 			r.Get("/me", s.GetCurrentUser)
+		})
+
+		// Relay Related.
+		r.Route("/relay", func(r chi.Router) {
+			r.Get("/publicKey", s.GetPublicKeyHandler)
+			r.Post("/relayMsg", s.RelayMessageHandler)
 		})
 	})
 
