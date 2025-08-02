@@ -24,3 +24,8 @@ func RandomInt(n int) int {
 	Assert(n > 0, "rand requested with n <= 0: %d", n)
 	return rand.Intn(n)
 }
+
+func RandomChoose[T any](t ...T) T {
+	idx := RandomInt(len(t) - 1)
+	return t[idx]
+}

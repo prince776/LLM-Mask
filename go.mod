@@ -4,9 +4,7 @@ go 1.24.4
 
 require (
 	cloud.google.com/go/firestore v1.18.0
-	github.com/PaddleHQ/paddle-go-sdk v1.0.0
 	github.com/cockroachdb/errors v1.12.0
-	github.com/coder/websocket v1.8.13
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/go-chi/cors v1.2.2
 	github.com/go-chi/httprate v0.15.0
@@ -17,8 +15,8 @@ require (
 	golang.org/x/oauth2 v0.30.0
 	golang.org/x/sync v0.16.0
 	google.golang.org/api v0.243.0
+	google.golang.org/genai v1.18.0
 	google.golang.org/grpc v1.74.2
-	nhooyr.io/websocket v1.8.17
 )
 
 require (
@@ -32,15 +30,14 @@ require (
 	github.com/cockroachdb/redact v1.1.5 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/getsentry/sentry-go v0.27.0 // indirect
-	github.com/ggicci/httpin v0.19.0 // indirect
-	github.com/ggicci/owl v0.8.2 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
-	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect

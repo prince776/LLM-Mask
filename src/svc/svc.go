@@ -86,12 +86,6 @@ func (s *Service) Run() {
 			r.Use(s.AuthMiddleware)
 			r.Get("/me", s.GetCurrentUser)
 		})
-
-		// Relay Related.
-		r.Route("/relay", func(r chi.Router) {
-			r.Get("/publicKey", s.GetPublicKeyHandler)
-			r.Post("/relayMsg", s.RelayMessageHandler)
-		})
 	})
 
 	// Serve React static files (from React build directory)
