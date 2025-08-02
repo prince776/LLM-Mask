@@ -9,6 +9,12 @@ type AuthManager struct {
 	rsaKeys secrets.RSAKeys
 }
 
+func NewAuthManager(rsaKeys secrets.RSAKeys) *AuthManager {
+	return &AuthManager{
+		rsaKeys: rsaKeys,
+	}
+}
+
 func (a *AuthManager) SignBlindedToken(blindedToken []byte) ([]byte, error) {
 	signedBlindedToken, err := secrets.RSASign(a.rsaKeys.PrivateKey, blindedToken)
 	if err != nil {

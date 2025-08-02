@@ -189,3 +189,9 @@ type googleUserInfoResp struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
 }
+
+type noValidationReq struct{}
+
+func (r *noValidationReq) Bind(*http.Request) error {
+	return nil
+}

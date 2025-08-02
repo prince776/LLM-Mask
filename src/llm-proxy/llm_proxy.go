@@ -149,7 +149,6 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 		Metadata:      []byte("lgtm"),
 		ProxyResponse: proxyRespBytes,
 	}
-
 	authToken.CachedResponse = resp.Bytes()
 	err = models.Upsert(ctx, authToken)
 	if err != nil {

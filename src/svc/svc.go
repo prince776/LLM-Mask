@@ -3,7 +3,9 @@ package svc
 import (
 	"context"
 	"github.com/go-chi/httprate"
+	"llmmask/src/auth"
 	"llmmask/src/confs"
+	llm_proxy "llmmask/src/llm-proxy"
 	"llmmask/src/log"
 	"net/http"
 	"path/filepath"
@@ -32,16 +34,25 @@ var (
 )
 
 type Service struct {
-	port       int
-	db         *firestore.Client
-	inMemCache cache.Cache
+	port         int
+	db           *firestore.Client
+	inMemCache   cache.Cache
+	authManagers map[llm_proxy.ModelName]*auth.AuthManager
+	llmProxy     *llm_proxy.LLMProxy
 }
 
-func NewService(port int, db *firestore.Client) *Service {
+func NewService(
+	port int,
+	db *firestore.Client,
+	authManagers map[llm_proxy.ModelName]*auth.AuthManager,
+	apiKeyManager *llm_proxy.APIKeyManager,
+) *Service {
 	return &Service{
-		port:       port,
-		db:         db,
-		inMemCache: *cache.New(10*time.Minute, 20*time.Minute),
+		port:         port,
+		db:           db,
+		inMemCache:   *cache.New(10*time.Minute, 20*time.Minute),
+		authManagers: authManagers,
+		llmProxy:     llm_proxy.NewLLMProxy(authManagers, apiKeyManager),
 	}
 }
 
@@ -85,7 +96,9 @@ func (s *Service) Run() {
 		r.Route("/", func(r chi.Router) {
 			r.Use(s.AuthMiddleware)
 			r.Get("/me", s.GetCurrentUser)
+			r.Post("/auth-token/{modelName}", s.GetSignedBlindedTokenHandler)
 		})
+		r.Post("/llm-proxy", s.LLMProxyHandler)
 	})
 
 	// Serve React static files (from React build directory)
