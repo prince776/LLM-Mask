@@ -16,7 +16,6 @@ import (
 	"github.com/go-chi/render"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
-	"google.golang.org/api/iterator"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -154,27 +153,25 @@ func (s *Service) signInUser(ctx context.Context, oauthConf *oauth2.Config, toke
 func (s *Service) deleteAllExistingUserSessions(ctx context.Context, user *models.User) error {
 	prevSessionsIt := models.ListUserSessions(ctx, user.DocID)
 	var prevSessions []*models.UserSession
-	for {
-		doc, err := prevSessionsIt.Next()
-		if errors.Is(err, iterator.Done) {
-			break
-		}
+	for prevSessionsIt.More() {
+		sessionsPage, err := prevSessionsIt.NextPage(ctx)
 		if err != nil {
 			return errors.Wrapf(err, "failed to iterate over prev user sessions")
 		}
 
-		userSession := &models.UserSession{}
-		err = doc.DataTo(userSession)
-		if err != nil {
-			return err
+		for _, itemData := range sessionsPage.Items {
+			userSession := &models.UserSession{}
+			err = models.Deserialize(itemData, userSession)
+			if err != nil {
+				return errors.Wrapf(err, "failed to deserialize user session")
+			}
+			prevSessions = append(prevSessions, userSession)
 		}
-		prevSessions = append(prevSessions, userSession)
 	}
 
 	log.Infof(ctx, "Prev user sessions: %+v", prevSessions)
-
 	for _, prevSessions := range prevSessions {
-		_, err := prevSessions.DocRef().Delete(ctx)
+		err := models.Delete(ctx, prevSessions)
 		if err != nil {
 			return errors.Wrap(err, "failed to delete prev user session")
 		}

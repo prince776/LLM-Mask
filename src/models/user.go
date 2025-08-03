@@ -1,18 +1,18 @@
 package models
 
 import (
-	"cloud.google.com/go/firestore"
+	"github.com/Azure/azure-sdk-for-go/sdk/data/azcosmos"
 	"llmmask/src/common"
 	"llmmask/src/db"
 )
 
 const (
-	UserCollection = "users"
+	UserContainer = "users"
 )
 
 type User struct {
 	// Public Fields.
-	DocID    string
+	DocID    string `json:"id"`
 	GoogleID string
 	Email    string
 	Name     string
@@ -22,12 +22,16 @@ type User struct {
 	SubscriptionInfo SubscriptionInfo
 }
 
-func (u *User) DocRef() *firestore.DocumentRef {
-	return UserCollRef().Doc(u.DocID)
+func (u *User) Container() *azcosmos.ContainerClient {
+	return db.ContainerRef(UserContainer)
 }
 
-func UserCollRef() *firestore.CollectionRef {
-	return db.CollectionRef(UserCollection)
+func (u *User) ItemID() string {
+	return u.DocID
+}
+
+func (u *User) PartitionKey() string {
+	return "primary"
 }
 
 func (u *User) ToRedacted() common.Redactable {

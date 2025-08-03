@@ -2,35 +2,37 @@ package db
 
 import (
 	"context"
+	"github.com/Azure/azure-sdk-for-go/sdk/data/azcosmos"
 	"llmmask/src/common"
-
-	"cloud.google.com/go/firestore"
+	"os"
 )
 
-var client *firestore.Client
+var client *azcosmos.Client
+var databaseName string
 
 func databaseID() string {
 	if common.IsProd() {
 		return "llmmask"
 	} else {
-		return "llmmask"
+		return "llmmaskdev"
 	}
 }
 
 func Init(ctx context.Context) {
+	endpoint := os.Getenv("AZURE_COSMOS_ENDPOINT")
+	key := os.Getenv("AZURE_COSMOS_KEY")
 	var err error
-	client, err = firestore.NewClientWithDatabase(ctx, firestore.DetectProjectID, databaseID(), common.PlatformSvcAccCredsOption())
-	common.Assert(err == nil, "Failed to init db client: %v", err)
+	client, err = azcosmos.NewClientWithKey(endpoint, key, nil)
+	common.Assert(err == nil, "Failed to init Cosmos DB client: %v", err)
+	databaseName = databaseID()
 }
 
-func Client() *firestore.Client {
+func Client() *azcosmos.Client {
 	return client
 }
 
-func DocRef(collection string, doc string) *firestore.DocumentRef {
-	return client.Collection(collection).Doc(doc)
-}
-
-func CollectionRef(collection string) *firestore.CollectionRef {
-	return client.Collection(collection)
+func ContainerRef(container string) *azcosmos.ContainerClient {
+	containerClient, err := Client().NewContainer(databaseName, container)
+	common.Assert(err == nil, "Failed to get container client: %v", err)
+	return containerClient
 }
