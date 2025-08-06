@@ -12,10 +12,11 @@ const (
 
 type User struct {
 	// Public Fields.
-	DocID    string `json:"id"`
-	GoogleID string
-	Email    string
-	Name     string
+	DocID        string `json:"id"`
+	PartitionKey string `json:"PartitionKey"`
+	GoogleID     string
+	Email        string
+	Name         string
 
 	TokenSerialized string
 
@@ -30,8 +31,10 @@ func (u *User) ItemID() string {
 	return u.DocID
 }
 
-func (u *User) PartitionKey() string {
-	return "primary"
+func (u *User) GetPartitionKey() string {
+	// TODO: partition key might be useful here.
+	u.PartitionKey = DefaultPartitionKey
+	return u.PartitionKey
 }
 
 func (u *User) ToRedacted() common.Redactable {

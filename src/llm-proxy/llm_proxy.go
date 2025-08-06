@@ -7,10 +7,10 @@ import (
 	"encoding/json"
 	"github.com/cockroachdb/errors"
 	"github.com/go-chi/render"
-	"google.golang.org/grpc/status"
 	"io"
 	"llmmask/src/auth"
 	"llmmask/src/common"
+	"llmmask/src/db"
 	"llmmask/src/models"
 	"net/http"
 	"net/url"
@@ -93,7 +93,7 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 	isFirstReq := false
 	err = models.Fetch(ctx, authToken)
 	if err != nil {
-		if status.Code(err) != http.StatusNotFound {
+		if !db.IsNotFoundErr(err) {
 			return nil, err
 		}
 		isFirstReq = true

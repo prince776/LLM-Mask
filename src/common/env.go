@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"google.golang.org/api/option"
 	"os"
 	"sync"
 )
@@ -27,16 +26,29 @@ func IsProd() bool {
 	return env == "PROD"
 }
 
-func PlatformSACredsFile() string {
+func PlatformCredsConfigFile() string {
 	if IsProd() {
-		return "resources/prod/gcp-sa.json"
+		return "resources/prod/creds.json"
 	} else {
-		return "resources/dev/gcp-sa.json"
+		return "resources/dev/creds.json"
 	}
 }
 
-func PlatformSvcAccCredsOption() option.ClientOption {
-	return option.WithCredentialsFile(PlatformSACredsFile())
+func PlatformCredsConfig() *CredsConfig {
+	data := Must(os.ReadFile(PlatformCredsConfigFile()))
+	res := &CredsConfig{}
+	Must2(json.Unmarshal(data, res))
+	return res
+}
+
+type CredsConfig struct {
+	Cosmos               *CosmosDBCredsConfig `json:"cosmos"`
+	Gemini25FlashAPIKeys []string             `json:"gemini_25_flash_api_keys"`
+}
+
+type CosmosDBCredsConfig struct {
+	DatabaseName     string `json:"database_name"`
+	ConnectionString string `json:"connection_string"`
 }
 
 var userOauthConf *oauth2.Config

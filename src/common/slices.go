@@ -13,3 +13,14 @@ func Filter[S ~[]E, E any](arr S, filter func(E) bool) S {
 	}
 	return res
 }
+
+func Map[S ~[]E, E, R any](arr S, mapFunc func(E) R) []R {
+	if arr == nil {
+		return nil
+	}
+	var res []R
+	for _, e := range arr {
+		res = append(res, mapFunc(e))
+	}
+	return res
+}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"llmmask/src/common"
+	"llmmask/src/db"
 	"llmmask/src/log"
 	"llmmask/src/models"
 	"llmmask/src/secrets"
@@ -16,8 +17,6 @@ import (
 	"github.com/go-chi/render"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 const (
@@ -108,7 +107,7 @@ func (s *Service) signInUser(ctx context.Context, oauthConf *oauth2.Config, toke
 		DocID: userInfo.ID,
 	}
 	err = models.Fetch(ctx, user)
-	if err != nil && status.Code(err) != codes.NotFound {
+	if err != nil && !db.IsNotFoundErr(err) {
 		return errors.Wrapf(err, "failed to check prev entry for this user in db")
 	}
 

@@ -9,7 +9,7 @@ import (
 
 type Model interface {
 	Container() *azcosmos.ContainerClient
-	PartitionKey() string
+	GetPartitionKey() string
 	ItemID() string
 }
 
@@ -18,13 +18,14 @@ func Deserialize(data []byte, m Model) error {
 }
 
 func Upsert(ctx context.Context, m Model) error {
+	m.GetPartitionKey() // Fill it
 	data, err := json.Marshal(m)
 	if err != nil {
 		return err
 	}
 	_, err = m.Container().UpsertItem(
 		ctx,
-		azcosmos.NewPartitionKeyString(m.PartitionKey()),
+		azcosmos.NewPartitionKeyString(m.GetPartitionKey()),
 		data,
 		nil,
 	)
@@ -32,9 +33,10 @@ func Upsert(ctx context.Context, m Model) error {
 }
 
 func Delete(ctx context.Context, m Model) error {
+	m.GetPartitionKey() // Fill it
 	_, err := m.Container().DeleteItem(
 		ctx,
-		azcosmos.NewPartitionKeyString(m.PartitionKey()),
+		azcosmos.NewPartitionKeyString(m.GetPartitionKey()),
 		m.ItemID(),
 		nil,
 	)
@@ -44,7 +46,7 @@ func Delete(ctx context.Context, m Model) error {
 func Fetch(ctx context.Context, m Model) error {
 	resp, err := m.Container().ReadItem(
 		ctx,
-		azcosmos.NewPartitionKeyString(m.PartitionKey()),
+		azcosmos.NewPartitionKeyString(m.GetPartitionKey()),
 		m.ItemID(),
 		nil,
 	)

@@ -9,15 +9,15 @@ import (
 )
 
 const (
-	UserSessionContainer    = "user_sessions"
-	UserSessionPartitionKey = "primary"
+	UserSessionContainer = "user_sessions"
 )
 
 type UserSession struct {
 	// Public Fields.
-	DocID     string `json:"id"`
-	UserDocID string
-	Expired   bool
+	DocID        string `json:"id"`
+	PartitionKey string `json:"PartitionKey"`
+	UserDocID    string
+	Expired      bool
 }
 
 func (u *UserSession) Container() *azcosmos.ContainerClient {
@@ -28,13 +28,14 @@ func (u *UserSession) ItemID() string {
 	return u.DocID
 }
 
-func (u *UserSession) PartitionKey() string {
-	return UserSessionPartitionKey
+func (u *UserSession) GetPartitionKey() string {
+	u.PartitionKey = DefaultPartitionKey
+	return u.PartitionKey
 }
 
 func ListUserSessions(ctx context.Context, userDocID string) *runtime.Pager[azcosmos.QueryItemsResponse] {
 	dummySess := UserSession{}
-	partitionKey := azcosmos.NewPartitionKeyString(dummySess.PartitionKey())
+	partitionKey := azcosmos.NewPartitionKeyString(dummySess.GetPartitionKey())
 	query := fmt.Sprintf("SELECT * FROM %s t WHERE t.id = @userID", UserSessionContainer)
 	queryOptions := azcosmos.QueryOptions{
 		QueryParameters: []azcosmos.QueryParameter{

@@ -24,19 +24,23 @@ func main() {
 	ctx := context.Background()
 	Init(ctx)
 
-	geminiKey := os.Getenv("GEMINI_API_KEY")
+	gemini25FlashKeys := common.PlatformCredsConfig().Gemini25FlashAPIKeys
+	gemini25FlashKeysAsSecrets := common.Map(
+		gemini25FlashKeys,
+		func(key string) common.SecretString {
+			return common.NewSecretString(key)
+		},
+	)
 	apiKeyManager := llm_proxy.NewAPIKeyManager(
 		map[llm_proxy.ModelName][]common.SecretString{
-			llm_proxy.ModelGemini25Flash: {
-				common.NewSecretString(geminiKey),
-			},
+			llm_proxy.ModelGemini25Flash: gemini25FlashKeysAsSecrets,
 		},
 	)
 	authManagers := map[llm_proxy.ModelName]*auth.AuthManager{
 		llm_proxy.ModelGemini25Flash: auth.NewAuthManager(secrets.GetGemini2FlashRSAKeys()),
 	}
 
-	server := svc.NewService(8080, db.Client(), authManagers, apiKeyManager)
+	server := svc.NewService(8080, authManagers, apiKeyManager)
 	server.Run()
 	os.Exit(0)
 }

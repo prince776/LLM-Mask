@@ -10,7 +10,7 @@ import (
 )
 
 // TODO: Get From KMS.
-const userCredsSecretKey = "<RANDOMBYTES>"
+const userCredsSecretKey = "cwGwXuzvcp749tSmPdbXXp1BqRZUcppf"
 
 func EncryptUserCreds(userData string) (string, error) {
 	return Encrypt(userData, userCredsSecretKey)

@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"cloud.google.com/go/firestore"
 	"github.com/cockroachdb/errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -35,7 +34,6 @@ var (
 
 type Service struct {
 	port         int
-	db           *firestore.Client
 	inMemCache   cache.Cache
 	authManagers map[llm_proxy.ModelName]*auth.AuthManager
 	llmProxy     *llm_proxy.LLMProxy
@@ -43,13 +41,11 @@ type Service struct {
 
 func NewService(
 	port int,
-	db *firestore.Client,
 	authManagers map[llm_proxy.ModelName]*auth.AuthManager,
 	apiKeyManager *llm_proxy.APIKeyManager,
 ) *Service {
 	return &Service{
 		port:         port,
-		db:           db,
 		inMemCache:   *cache.New(10*time.Minute, 20*time.Minute),
 		authManagers: authManagers,
 		llmProxy:     llm_proxy.NewLLMProxy(authManagers, apiKeyManager),
