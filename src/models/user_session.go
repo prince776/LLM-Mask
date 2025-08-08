@@ -36,7 +36,7 @@ func (u *UserSession) GetPartitionKey() string {
 func ListUserSessions(ctx context.Context, userDocID string) *runtime.Pager[azcosmos.QueryItemsResponse] {
 	dummySess := UserSession{}
 	partitionKey := azcosmos.NewPartitionKeyString(dummySess.GetPartitionKey())
-	query := fmt.Sprintf("SELECT * FROM %s t WHERE t.id = @userID", UserSessionContainer)
+	query := fmt.Sprintf("SELECT * FROM %s t WHERE t.UserDocID = @userID", UserSessionContainer)
 	queryOptions := azcosmos.QueryOptions{
 		QueryParameters: []azcosmos.QueryParameter{
 			{Name: "@userID", Value: userDocID},

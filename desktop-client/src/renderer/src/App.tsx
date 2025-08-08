@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import  { useState } from 'react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Sidebar } from './components/Sidebar';
 import { ChatInterface } from './components/ChatInterface';
@@ -6,13 +6,14 @@ import { ProfilePage } from './components/ProfilePage';
 import { SettingsPage } from './components/SettingsPage';
 import { PurchaseTokensPage } from './components/PurchaseTokensPage';
 import { useChats } from './hooks/useChats';
+import { useUser } from './contexts/UserContext';
 
 type Page = 'chat' | 'profile' | 'settings' | 'purchase-tokens';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('chat');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   const {
     chats,
     activeChat,
@@ -22,6 +23,8 @@ function App() {
     addMessage,
     getCurrentChat
   } = useChats();
+
+  const { user } = useUser();
 
   const handleSendMessage = (content: string) => {
     if (!activeChat) {
@@ -77,12 +80,17 @@ function App() {
             setCurrentPage('profile');
             setSidebarOpen(false);
           }}
+          onSignInClick={() => {
+            setCurrentPage('profile'); // or a dedicated sign-in page if you have one
+            setSidebarOpen(false);
+          }}
           onPurchaseTokensClick={() => {
             setCurrentPage('purchase-tokens');
             setSidebarOpen(false);
           }}
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen(!sidebarOpen)}
+          user={user}
         />
 
         {/* Main Content */}

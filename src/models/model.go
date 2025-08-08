@@ -29,7 +29,7 @@ func Upsert(ctx context.Context, m Model) error {
 		data,
 		nil,
 	)
-	return err
+	return errors.Wrapf(err, "failed to upsert")
 }
 
 func Delete(ctx context.Context, m Model) error {
@@ -40,7 +40,7 @@ func Delete(ctx context.Context, m Model) error {
 		m.ItemID(),
 		nil,
 	)
-	return err
+	return errors.Wrapf(err, "failed to delete")
 }
 
 func Fetch(ctx context.Context, m Model) error {
@@ -51,7 +51,7 @@ func Fetch(ctx context.Context, m Model) error {
 		nil,
 	)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to fetch")
 	}
 	if resp.RawResponse.StatusCode != 200 {
 		return errors.Newf("unexpected resp: %v, %v", resp.RawResponse.Status, resp.RawResponse.Status)

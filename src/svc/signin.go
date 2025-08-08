@@ -112,6 +112,8 @@ func (s *Service) signInUser(ctx context.Context, oauthConf *oauth2.Config, toke
 	}
 
 	user.DocID = userInfo.ID
+	user.Name = userInfo.Name
+	user.Email = userInfo.Email
 	user.TokenSerialized = tokenEncrypted
 
 	err = models.Upsert(ctx, user)

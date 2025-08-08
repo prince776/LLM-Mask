@@ -11,6 +11,8 @@ interface SidebarProps {
   onSettingsClick: () => void;
   onProfileClick: () => void;
   onPurchaseTokensClick: () => void;
+  onSignInClick: () => void;
+  user: any;
   isOpen: boolean;
   onToggle: () => void;
 }
@@ -24,6 +26,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSettingsClick,
   onProfileClick,
   onPurchaseTokensClick,
+  onSignInClick,
+  user,
   isOpen,
   onToggle
 }) => {
@@ -31,7 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 1) return 'Today';
     if (diffDays === 2) return 'Yesterday';
     if (diffDays <= 7) return `${diffDays - 1} days ago`;
@@ -42,15 +46,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <>
       {/* Mobile overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={onToggle}
         />
       )}
-      
+
       {/* Sidebar */}
       <div className={`
-        fixed lg:relative top-0 left-0 h-full w-80 bg-white dark:bg-gray-900 
+        fixed lg:relative top-0 left-0 h-full w-80 bg-white dark:bg-gray-900
         border-r border-gray-200 dark:border-gray-700 flex flex-col z-50
         transform transition-transform duration-300 ease-in-out lg:translate-x-0
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -68,7 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <X size={20} className="text-gray-600 dark:text-gray-400" />
             </button>
           </div>
-          
+
           <button
             onClick={onNewChat}
             className="w-full flex items-center justify-center gap-2 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
@@ -86,8 +90,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 key={chat.id}
                 className={`
                   group relative p-3 rounded-lg cursor-pointer transition-all duration-200
-                  ${activeChat === chat.id 
-                    ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700' 
+                  ${activeChat === chat.id
+                    ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700'
                     : 'hover:bg-gray-50 dark:hover:bg-gray-800'
                   }
                 `}
@@ -96,16 +100,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div className="flex items-start gap-3">
                   <MessageSquare size={18} className={`
                     flex-shrink-0 mt-0.5
-                    ${activeChat === chat.id 
-                      ? 'text-blue-600 dark:text-blue-400' 
+                    ${activeChat === chat.id
+                      ? 'text-blue-600 dark:text-blue-400'
                       : 'text-gray-400 dark:text-gray-500'
                     }
                   `} />
                   <div className="flex-1 min-w-0">
                     <h3 className={`
                       font-medium text-sm truncate
-                      ${activeChat === chat.id 
-                        ? 'text-blue-900 dark:text-blue-100' 
+                      ${activeChat === chat.id
+                        ? 'text-blue-900 dark:text-blue-100'
                         : 'text-gray-900 dark:text-gray-100'
                       }
                     `}>
@@ -133,13 +137,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">
           <div className="space-y-2">
-            <button
-              onClick={onProfileClick}
-              className="w-full flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-left"
-            >
-              <User size={18} className="text-gray-600 dark:text-gray-400" />
-              <span className="text-gray-900 dark:text-gray-100">Profile</span>
-            </button>
+            {user ? (
+              <button
+                onClick={onProfileClick}
+                className="w-full flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-left"
+              >
+                <User size={18} className="text-gray-600 dark:text-gray-400" />
+                <span className="text-gray-900 dark:text-gray-100">Profile</span>
+              </button>
+            ) : (
+              <button
+                onClick={onSignInClick}
+                className="w-full flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-left"
+              >
+                <User size={18} className="text-gray-600 dark:text-gray-400" />
+                <span className="text-gray-900 dark:text-gray-100">Sign In</span>
+              </button>
+            )}
             <button
               onClick={onPurchaseTokensClick}
               className="w-full flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-left"

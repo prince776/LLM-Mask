@@ -2,6 +2,9 @@ package log
 
 import (
 	"context"
+	"fmt"
+	"github.com/cockroachdb/errors/errbase"
+	"runtime/debug"
 
 	"go.uber.org/zap"
 )
@@ -23,7 +26,15 @@ func Infof(ctx context.Context, template string, args ...interface{}) {
 }
 
 func Errorf(ctx context.Context, template string, args ...interface{}) {
-	logger.Errorf(template, args...)
+	stacktrace := string(debug.Stack())
+	for _, arg := range args {
+		if _, ok := arg.(error); ok {
+			if _, ok = arg.(errbase.StackTraceProvider); ok {
+				stacktrace = fmt.Sprintf("%+v", arg)
+			}
+		}
+	}
+	logger.With("stacktrace", stacktrace).Errorf(template, args...)
 }
 
 func PanicfNoCtx(template string, args ...interface{}) {

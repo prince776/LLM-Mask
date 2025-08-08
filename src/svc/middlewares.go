@@ -25,11 +25,15 @@ func (s *Service) AuthMiddleware(next http.Handler) http.Handler {
 			render.Render(w, r, ErrUnauthorized(errors.Wrap(err, "failed to get cookies")))
 			return
 		}
+		if err != nil { // i.e no cookie
+			render.Render(w, r, ErrUnauthorized(errors.Wrap(err, "no cookies")))
+			return
+		}
 
 		sessionID := cookie.Value
 		user, err := s.getUserFromSession(r.Context(), sessionID)
 		if err != nil || user == nil {
-			render.Render(w, r, ErrUnauthorized(errors.Wrapf(err, "failed to get user form session")))
+			render.Render(w, r, ErrUnauthorized(errors.Wrapf(err, "failed to get user from session")))
 			return
 		}
 		// Store user info in context
@@ -72,7 +76,9 @@ func (s *Service) getUserFromSession(ctx context.Context, sessionID string) (*mo
 }
 
 func (s *Service) getUserFromDocID(ctx context.Context, docID string) (*models.User, error) {
-	user := &models.User{}
+	user := &models.User{
+		DocID: docID,
+	}
 	err := models.Fetch(ctx, user)
 	if err != nil {
 		return nil, err
