@@ -115,6 +115,7 @@ func (s *Service) signInUser(ctx context.Context, oauthConf *oauth2.Config, toke
 	user.Name = userInfo.Name
 	user.Email = userInfo.Email
 	user.TokenSerialized = tokenEncrypted
+	user.ProfileImage = userInfo.Picture
 
 	err = models.Upsert(ctx, user)
 	if err != nil {
@@ -183,9 +184,10 @@ func (s *Service) deleteAllExistingUserSessions(ctx context.Context, user *model
 }
 
 type googleUserInfoResp struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Email   string `json:"email"`
+	Picture string `json:"picture"`
 }
 
 type noValidationReq struct{}

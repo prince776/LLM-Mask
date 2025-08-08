@@ -21,6 +21,8 @@ type User struct {
 	TokenSerialized string
 
 	SubscriptionInfo SubscriptionInfo
+
+	ProfileImage string // URL to user's profile image
 }
 
 func (u *User) Container() *azcosmos.ContainerClient {

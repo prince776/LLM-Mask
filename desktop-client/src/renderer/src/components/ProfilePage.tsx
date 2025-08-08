@@ -45,9 +45,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-6">
             <div className="relative">
-              <div className="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center">
-                <User size={32} className="text-white" />
-              </div>
+              {user.picture ? (
+                <img
+                  src={user.picture}
+                  alt="Profile"
+                  className="w-24 h-24 rounded-full object-cover border-2 border-blue-600"
+                />
+              ) : (
+                <div className="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center">
+                  <User size={32} className="text-white" />
+                </div>
+              )}
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">

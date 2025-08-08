@@ -6,6 +6,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  picture: string;
 }
 
 interface UserContextType {
@@ -38,11 +39,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
           const data = await res.json();
           console.log("Got user", data.data)
           setUser({
-            id: data.id,
-            name: data.Name,
-            email: data.Email,
+            id: data.data.id,
+            name: data.data.Name,
+            email: data.data.Email,
+            picture: data.data.ProfileImage,
           })
-          setUser(data.user);
         } else if (res.status === 401) {
           // Not authenticated
           setUser(null);
