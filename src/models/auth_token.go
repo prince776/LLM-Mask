@@ -1,8 +1,6 @@
 package models
 
 import (
-	"github.com/Azure/azure-sdk-for-go/sdk/data/azcosmos"
-	"llmmask/src/db"
 	"time"
 )
 
@@ -21,8 +19,8 @@ type AuthToken struct {
 	CachedResponse []byte // To not screw over customers over flaky network.
 }
 
-func (u *AuthToken) Container() *azcosmos.ContainerClient {
-	return db.ContainerRef(AuthTokenContainer)
+func (u *AuthToken) Container() string {
+	return AuthTokenContainer
 }
 
 func (u *AuthToken) ItemID() string {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/cockroachdb/errors"
 	"llmmask/src/common"
+	"llmmask/src/confs"
 	"net/http"
 	"strings"
 )
@@ -17,7 +18,7 @@ type LLMProxyRequestBody struct {
 	Body        []byte              `json:"body"`
 }
 
-func (b *LLMProxyRequestBody) ExtractIntendedModel() (ModelName, error) {
+func (b *LLMProxyRequestBody) ExtractIntendedModel() (confs.ModelName, error) {
 	if strings.HasPrefix(b.DestURL, "https://generativelanguage.googleapis.com") {
 		tokens := strings.Split(b.DestURL, "/")
 		modelName := tokens[len(tokens)-1]

@@ -6,10 +6,10 @@ import (
 )
 
 type AuthManager struct {
-	rsaKeys secrets.RSAKeys
+	rsaKeys *secrets.RSAKeys
 }
 
-func NewAuthManager(rsaKeys secrets.RSAKeys) *AuthManager {
+func NewAuthManager(rsaKeys *secrets.RSAKeys) *AuthManager {
 	return &AuthManager{
 		rsaKeys: rsaKeys,
 	}

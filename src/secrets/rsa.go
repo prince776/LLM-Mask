@@ -6,7 +6,13 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
+	"encoding/pem"
+	"github.com/cockroachdb/errors"
 	"llmmask/src/common"
+	"llmmask/src/confs"
+	"llmmask/src/log"
+	"llmmask/src/models"
 )
 
 type RSAKeys struct {
@@ -24,20 +30,31 @@ func (e RSAKeys) ToRedacted() common.Redactable {
 	return res
 }
 
-var gemini2FlashRSAKeys RSAKeys
+var rsaKeysPerModel map[confs.ModelName]*RSAKeys
 
-func GetGemini2FlashRSAKeys() RSAKeys {
-	return gemini2FlashRSAKeys
+func GetRSAKeysForModel(modelName confs.ModelName) *RSAKeys {
+	return rsaKeysPerModel[modelName]
 }
 
-func Init(ctx context.Context) {
-	// Generate random keys for testing. In a real application, you would
-	// load keys from a secure location, not generate them on startup.
-	privateKey := common.Must(rsa.GenerateKey(rand.Reader, 2048)) // 2048-bit key size
-	publicKey := &privateKey.PublicKey
-	gemini2FlashRSAKeys = RSAKeys{
-		PrivateKey: privateKey,
-		PublicKey:  publicKey,
+func InitRSA(ctx context.Context) {
+	rsaKeysPerModel = make(map[confs.ModelName]*RSAKeys)
+	dbHandler := models.DefaultDBHandler()
+	kms := DefaultKMS()
+	for _, modelName := range confs.AllModels() {
+		log.Infof(ctx, "Loading rsa for model: %s", modelName)
+		rsaKey := &models.RSAKeys{
+			DocID: modelName,
+		}
+		common.Must2(dbHandler.Fetch(ctx, rsaKey))
+
+		dek := common.Must(kms.Decrypt(ctx, string(rsaKey.DEKWrapped), rsaKey.KMSKeyID))
+
+		privateKeyPT := common.Must(DecryptAES(string(rsaKey.PrivateKeyWrapped), string(dek)))
+		publicKeyPT := string(rsaKey.PublicKeyPlaintext)
+
+		rsaKeysForModel := common.Must(RSALoad(privateKeyPT, publicKeyPT))
+		rsaKeysPerModel[modelName] = rsaKeysForModel
+		log.Infof(ctx, "Loaded RSA keys for model: %s", modelName)
 	}
 }
 
@@ -102,4 +119,36 @@ func RSAVerify(publicKey *rsa.PublicKey, msg, signature []byte) error {
 	)
 
 	return err
+}
+
+func RSALoad(privateKeyPEM, publicKeyStr string) (*RSAKeys, error) {
+	block, _ := pem.Decode([]byte(privateKeyPEM))
+	if block == nil || block.Type != "PRIVATE KEY" {
+		return nil, errors.Newf("Failed to decode PEM block containing RSA private key, block %+v", block)
+	}
+
+	privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, errors.Newf("Failed to parse RSA private key: %v", err)
+	}
+	privateRSAKey, ok := privateKey.(*rsa.PrivateKey)
+
+	block, _ = pem.Decode([]byte(publicKeyStr))
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return nil, errors.Newf("Failed to decode PEM block containing public key")
+	}
+
+	publicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, errors.Newf("Failed to parse RSA public key: %v", err)
+	}
+	publicRSAKey, ok := publicKey.(*rsa.PublicKey)
+	if !ok {
+		return nil, errors.Newf("Failed to parse RSA public key")
+	}
+
+	return &RSAKeys{
+		PrivateKey: privateRSAKey,
+		PublicKey:  publicRSAKey,
+	}, nil
 }

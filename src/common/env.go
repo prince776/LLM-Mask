@@ -44,6 +44,16 @@ func PlatformCredsConfig() *CredsConfig {
 type CredsConfig struct {
 	Cosmos               *CosmosDBCredsConfig `json:"cosmos"`
 	Gemini25FlashAPIKeys []string             `json:"gemini_25_flash_api_keys"`
+	KeyVaultCreds        *KeyVaultCredsConfig `json:"key_vault_creds"`
+	ModelToKeyNames      map[string]string    `json:"model_to_key_names"`
+}
+
+type KeyVaultCredsConfig struct {
+	TenantID     string `json:"tenant_id"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	URL          string `json:"url"`
+	PlatformKey  string `json:"platform_key"`
 }
 
 type CosmosDBCredsConfig struct {

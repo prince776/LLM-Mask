@@ -1,9 +1,7 @@
 package models
 
 import (
-	"github.com/Azure/azure-sdk-for-go/sdk/data/azcosmos"
 	"llmmask/src/common"
-	"llmmask/src/db"
 )
 
 const (
@@ -25,8 +23,8 @@ type User struct {
 	ProfileImage string // URL to user's profile image
 }
 
-func (u *User) Container() *azcosmos.ContainerClient {
-	return db.ContainerRef(UserContainer)
+func (u *User) Container() string {
+	return UserContainer
 }
 
 func (u *User) ItemID() string {

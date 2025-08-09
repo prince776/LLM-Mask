@@ -7,6 +7,7 @@ import (
 	"llmmask/src/confs"
 	llm_proxy "llmmask/src/llm-proxy"
 	"llmmask/src/log"
+	"llmmask/src/models"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -35,20 +36,23 @@ var (
 type Service struct {
 	port         int
 	inMemCache   cache.Cache
-	authManagers map[llm_proxy.ModelName]*auth.AuthManager
+	authManagers map[confs.ModelName]*auth.AuthManager
 	llmProxy     *llm_proxy.LLMProxy
+	dbHandler    *models.DBHandler
 }
 
 func NewService(
 	port int,
-	authManagers map[llm_proxy.ModelName]*auth.AuthManager,
+	authManagers map[confs.ModelName]*auth.AuthManager,
 	apiKeyManager *llm_proxy.APIKeyManager,
+	dbHandler *models.DBHandler,
 ) *Service {
 	return &Service{
 		port:         port,
 		inMemCache:   *cache.New(10*time.Minute, 20*time.Minute),
 		authManagers: authManagers,
-		llmProxy:     llm_proxy.NewLLMProxy(authManagers, apiKeyManager),
+		llmProxy:     llm_proxy.NewLLMProxy(authManagers, apiKeyManager, dbHandler),
+		dbHandler:    dbHandler,
 	}
 }
 

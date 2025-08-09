@@ -3,7 +3,6 @@ package common
 import (
 	"context"
 	"llmmask/src/log"
-	"runtime/debug"
 )
 
 func Assert(condition bool, msg string, args ...interface{}) {
@@ -14,7 +13,7 @@ func Assert(condition bool, msg string, args ...interface{}) {
 }
 
 func Must[T any](t T, err error) T {
-	Assert(err == nil, "Must failed st: %+v", debug.Stack())
+	Assert(err == nil, "Must failed, err: %v ", err)
 	return t
 }
 

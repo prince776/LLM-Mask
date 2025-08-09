@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"io"
 	"llmmask/src/common"
-	"llmmask/src/db"
 	"llmmask/src/log"
 	"llmmask/src/models"
 	"llmmask/src/secrets"
@@ -106,8 +105,8 @@ func (s *Service) signInUser(ctx context.Context, oauthConf *oauth2.Config, toke
 	user := &models.User{
 		DocID: userInfo.ID,
 	}
-	err = models.Fetch(ctx, user)
-	if err != nil && !db.IsNotFoundErr(err) {
+	err = s.dbHandler.Fetch(ctx, user)
+	if err != nil && !models.IsNotFoundErr(err) {
 		return errors.Wrapf(err, "failed to check prev entry for this user in db")
 	}
 
@@ -117,7 +116,7 @@ func (s *Service) signInUser(ctx context.Context, oauthConf *oauth2.Config, toke
 	user.TokenSerialized = tokenEncrypted
 	user.ProfileImage = userInfo.Picture
 
-	err = models.Upsert(ctx, user)
+	err = s.dbHandler.Upsert(ctx, user)
 	if err != nil {
 		return errors.Wrap(err, "failed to upsert user")
 	}
@@ -133,7 +132,7 @@ func (s *Service) signInUser(ctx context.Context, oauthConf *oauth2.Config, toke
 		Expired:   false,
 	}
 
-	err = models.Upsert(ctx, userSession)
+	err = s.dbHandler.Upsert(ctx, userSession)
 	if err != nil {
 		return errors.Wrapf(err, "failed to save user session")
 	}
@@ -153,7 +152,7 @@ func (s *Service) signInUser(ctx context.Context, oauthConf *oauth2.Config, toke
 }
 
 func (s *Service) deleteAllExistingUserSessions(ctx context.Context, user *models.User) error {
-	prevSessionsIt := models.ListUserSessions(ctx, user.DocID)
+	prevSessionsIt := models.ListUserSessions(ctx, s.dbHandler, user.DocID)
 	var prevSessions []*models.UserSession
 	for prevSessionsIt.More() {
 		sessionsPage, err := prevSessionsIt.NextPage(ctx)
@@ -173,7 +172,7 @@ func (s *Service) deleteAllExistingUserSessions(ctx context.Context, user *model
 
 	log.Infof(ctx, "Prev user sessions: %+v", prevSessions)
 	for _, prevSessions := range prevSessions {
-		err := models.Delete(ctx, prevSessions)
+		err := s.dbHandler.Delete(ctx, prevSessions)
 		if err != nil {
 			return errors.Wrap(err, "failed to delete prev user session")
 		}

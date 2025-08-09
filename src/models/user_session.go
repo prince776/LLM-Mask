@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/data/azcosmos"
-	"llmmask/src/db"
 )
 
 const (
@@ -20,8 +19,8 @@ type UserSession struct {
 	Expired      bool
 }
 
-func (u *UserSession) Container() *azcosmos.ContainerClient {
-	return db.ContainerRef(UserSessionContainer)
+func (u *UserSession) Container() string {
+	return UserSessionContainer
 }
 
 func (u *UserSession) ItemID() string {
@@ -33,8 +32,8 @@ func (u *UserSession) GetPartitionKey() string {
 	return u.PartitionKey
 }
 
-func ListUserSessions(ctx context.Context, userDocID string) *runtime.Pager[azcosmos.QueryItemsResponse] {
-	dummySess := UserSession{}
+func ListUserSessions(ctx context.Context, dbHandler *DBHandler, userDocID string) *runtime.Pager[azcosmos.QueryItemsResponse] {
+	dummySess := &UserSession{}
 	partitionKey := azcosmos.NewPartitionKeyString(dummySess.GetPartitionKey())
 	query := fmt.Sprintf("SELECT * FROM %s t WHERE t.UserDocID = @userID", UserSessionContainer)
 	queryOptions := azcosmos.QueryOptions{
@@ -43,5 +42,5 @@ func ListUserSessions(ctx context.Context, userDocID string) *runtime.Pager[azco
 		},
 	}
 
-	return dummySess.Container().NewQueryItemsPager(query, partitionKey, &queryOptions)
+	return dbHandler.ContainerRef(dummySess).NewQueryItemsPager(query, partitionKey, &queryOptions)
 }

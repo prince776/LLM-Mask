@@ -5,7 +5,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/go-chi/render"
 	"llmmask/src/common"
-	llm_proxy "llmmask/src/llm-proxy"
+	"llmmask/src/confs"
 	"llmmask/src/log"
 	"llmmask/src/models"
 	"net/http"
@@ -52,7 +52,7 @@ func (s *Service) getSignedBlindedToken(ctx context.Context, user *models.User, 
 	}
 	defer common.ReleaseSemaphore(sem)
 
-	err = models.Fetch(ctx, user)
+	err = s.dbHandler.Fetch(ctx, user)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (s *Service) getSignedBlindedToken(ctx context.Context, user *models.User, 
 	}
 	user.SubscriptionInfo.ActiveAuthTokens[req.ModelName] = currActive
 	user.SubscriptionInfo.UsedAuthTokens[req.ModelName] = currUsed
-	err = models.Upsert(ctx, user)
+	err = s.dbHandler.Upsert(ctx, user)
 	if err != nil {
 		return nil, err
 	}
@@ -96,10 +96,10 @@ type GetSignedBlindedTokenReq struct {
 	noValidationReq
 	RequestID    string
 	BlindedToken []byte
-	ModelName    llm_proxy.ModelName
+	ModelName    confs.ModelName
 }
 
 type GetSignedBlindedTokenResp struct {
-	ModelName          llm_proxy.ModelName
+	ModelName          confs.ModelName
 	SignedBlindedToken []byte
 }

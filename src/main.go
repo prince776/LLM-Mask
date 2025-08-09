@@ -4,9 +4,10 @@ import (
 	"context"
 	"llmmask/src/auth"
 	"llmmask/src/common"
-	"llmmask/src/db"
+	"llmmask/src/confs"
 	llm_proxy "llmmask/src/llm-proxy"
 	"llmmask/src/log"
+	"llmmask/src/models"
 	"llmmask/src/secrets"
 	"llmmask/src/svc"
 	"os"
@@ -14,7 +15,7 @@ import (
 
 func Init(ctx context.Context) {
 	log.Init()
-	db.Init(ctx)
+	models.Init(ctx)
 	secrets.Init(ctx)
 	common.InitGlobalSemaphoreManager()
 	log.Infof(ctx, "Initialization Done!")
@@ -32,15 +33,16 @@ func main() {
 		},
 	)
 	apiKeyManager := llm_proxy.NewAPIKeyManager(
-		map[llm_proxy.ModelName][]common.SecretString{
-			llm_proxy.ModelGemini25Flash: gemini25FlashKeysAsSecrets,
+		map[confs.ModelName][]common.SecretString{
+			confs.ModelGemini25Flash: gemini25FlashKeysAsSecrets,
 		},
 	)
-	authManagers := map[llm_proxy.ModelName]*auth.AuthManager{
-		llm_proxy.ModelGemini25Flash: auth.NewAuthManager(secrets.GetGemini2FlashRSAKeys()),
+	authManagers := map[confs.ModelName]*auth.AuthManager{
+		confs.ModelGemini25Flash: auth.NewAuthManager(secrets.GetRSAKeysForModel(confs.ModelGemini25Flash)),
 	}
 
-	server := svc.NewService(8080, authManagers, apiKeyManager)
+	dbHandler := models.DefaultDBHandler()
+	server := svc.NewService(8080, authManagers, apiKeyManager, dbHandler)
 	server.Run()
 	os.Exit(0)
 }

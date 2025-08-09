@@ -63,7 +63,7 @@ func (s *Service) getUserFromSession(ctx context.Context, sessionID string) (*mo
 	userSession := &models.UserSession{
 		DocID: sessionID,
 	}
-	err := models.Fetch(ctx, userSession)
+	err := s.dbHandler.Fetch(ctx, userSession)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (s *Service) getUserFromDocID(ctx context.Context, docID string) (*models.U
 	user := &models.User{
 		DocID: docID,
 	}
-	err := models.Fetch(ctx, user)
+	err := s.dbHandler.Fetch(ctx, user)
 	if err != nil {
 		return nil, err
 	}

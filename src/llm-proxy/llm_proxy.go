@@ -10,30 +10,26 @@ import (
 	"io"
 	"llmmask/src/auth"
 	"llmmask/src/common"
-	"llmmask/src/db"
+	"llmmask/src/confs"
 	"llmmask/src/models"
 	"net/http"
 	"net/url"
 	"time"
 )
 
-type ModelName = string
-
-const (
-	ModelGemini25Flash = "gemini-2.5-flash"
-)
-
 // LLMProxy will be responsible for proxying requests, and also all the bookkeeping related to them.
 // This is needed to stop replay attacks, and also stop wastage of tokens in case of network errors.
 type LLMProxy struct {
 	apiKeyManager *APIKeyManager
-	authManagers  map[ModelName]*auth.AuthManager
+	authManagers  map[confs.ModelName]*auth.AuthManager
+	dbHandler     *models.DBHandler
 }
 
-func NewLLMProxy(authManagers map[ModelName]*auth.AuthManager, apiKeyManager *APIKeyManager) *LLMProxy {
+func NewLLMProxy(authManagers map[confs.ModelName]*auth.AuthManager, apiKeyManager *APIKeyManager, dbHandler *models.DBHandler) *LLMProxy {
 	return &LLMProxy{
 		authManagers:  authManagers,
 		apiKeyManager: apiKeyManager,
+		dbHandler:     dbHandler,
 	}
 }
 
@@ -91,9 +87,9 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 		DocID: intendedModel,
 	}
 	isFirstReq := false
-	err = models.Fetch(ctx, authToken)
+	err = l.dbHandler.Fetch(ctx, authToken)
 	if err != nil {
-		if !db.IsNotFoundErr(err) {
+		if !models.IsNotFoundErr(err) {
 			return nil, err
 		}
 		isFirstReq = true
@@ -132,7 +128,7 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 	proxyResp, err := http.DefaultClient.Do(reqFwd)
 
 	switch intendedModel {
-	case ModelGemini25Flash:
+	case confs.ModelGemini25Flash:
 		reqFwd.Header.Set("x-goog-api-key", apiKey.UnsafeString())
 	}
 
@@ -150,7 +146,7 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 		ProxyResponse: proxyRespBytes,
 	}
 	authToken.CachedResponse = resp.Bytes()
-	err = models.Upsert(ctx, authToken)
+	err = l.dbHandler.Upsert(ctx, authToken)
 	if err != nil {
 		return nil, err
 	}
