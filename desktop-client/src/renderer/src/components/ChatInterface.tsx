@@ -7,7 +7,7 @@ import { Chat, Message } from '../types'
 
 interface ChatInterfaceProps {
   chat: Chat | undefined
-  onSendMessage: (message: string) => void
+  onSendMessage: (message: string, role: 'user' | 'assistant') => void
   onToggleSidebar: () => void
 }
 
@@ -30,7 +30,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const handleSendMessage = async (message: string) => {
     setIsLoading(true)
-    onSendMessage(message)
+    onSendMessage(message, 'user')
 
     // Simulate AI response
     setTimeout(
@@ -44,7 +44,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         ]
 
         const randomResponse = responses[Math.floor(Math.random() * responses.length)]
-        onSendMessage(randomResponse)
+        onSendMessage(randomResponse, 'assistant')
         setIsLoading(false)
       },
       1000 + Math.random() * 2000
