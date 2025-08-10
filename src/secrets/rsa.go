@@ -6,8 +6,10 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/sha512"
 	"crypto/x509"
 	"encoding/pem"
+	"github.com/cloudflare/circl/blindsign/blindrsa"
 	"github.com/cockroachdb/errors"
 	"llmmask/src/common"
 	"llmmask/src/confs"
@@ -85,13 +87,15 @@ func RSADecrypt(pvtKey *rsa.PrivateKey, msg []byte) ([]byte, error) {
 // The message is first hashed, and the hash is then signed with the private key.
 func RSASign(privateKey *rsa.PrivateKey, msg []byte) ([]byte, error) {
 	// Hash the message first.
-	hashedMsg := sha256.Sum256(msg)
+	h := sha512.New384()
+	h.Write(msg)
+	hashedMsg := h.Sum(nil)
 
 	// Sign the hash.
 	signature, err := rsa.SignPSS(
 		rand.Reader,
 		privateKey,
-		crypto.SHA256,
+		crypto.SHA384,
 		hashedMsg[:],
 		nil,
 	)
@@ -102,17 +106,30 @@ func RSASign(privateKey *rsa.PrivateKey, msg []byte) ([]byte, error) {
 	return signature, nil
 }
 
+// RSASignBlinded receives a blinded token from the client, signs it, and returns the signed blinded token.
+func RSASignBlinded(privateKey *rsa.PrivateKey, msg []byte) ([]byte, error) {
+	signer := blindrsa.NewSigner(privateKey)
+	signedBlindedToken, err := signer.BlindSign(msg)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to sign blinded token")
+	}
+
+	return signedBlindedToken, nil
+}
+
 // RSAVerify verifies a signature using the PSS padding scheme.
 // It re-hashes the original message and then verifies that the signature
 // matches the hash with the public key.
 func RSAVerify(publicKey *rsa.PublicKey, msg, signature []byte) error {
 	// Hash the message first, using the same hash function as signing.
-	hashedMsg := sha256.Sum256(msg)
+	h := sha512.New384()
+	h.Write(msg)
+	hashedMsg := h.Sum(nil)
 
 	// Verify the signature against the hash.
 	err := rsa.VerifyPSS(
 		publicKey,
-		crypto.SHA256,
+		crypto.SHA384,
 		hashedMsg[:],
 		signature,
 		nil,

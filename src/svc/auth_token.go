@@ -26,7 +26,7 @@ func (s *Service) GetSignedBlindedTokenHandler(w http.ResponseWriter, r *http.Re
 		render.Render(w, r, ErrInternal(err))
 		return
 	}
-	render.Respond(w, r, resp)
+	render.Respond(w, r, Ok200(resp))
 }
 
 func (s *Service) getSignedBlindedToken(ctx context.Context, user *models.User, req *GetSignedBlindedTokenReq) (*GetSignedBlindedTokenResp, error) {

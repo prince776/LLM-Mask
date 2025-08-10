@@ -30,6 +30,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Try to load user if already signed in (with cookies)
     const fetchUser = async () => {
+      const blindedToken = await window.api.generateToken({
+        modelName: "gemini-2.5-flash"
+      });
+      console.log("Blinded token", blindedToken);
       try {
         const res = await fetch(`${SERVER_URL}/api/v1/me`, {
           method: "GET",

@@ -16,7 +16,7 @@ func NewAuthManager(rsaKeys *secrets.RSAKeys) *AuthManager {
 }
 
 func (a *AuthManager) SignBlindedToken(blindedToken []byte) ([]byte, error) {
-	signedBlindedToken, err := secrets.RSASign(a.rsaKeys.PrivateKey, blindedToken)
+	signedBlindedToken, err := secrets.RSASignBlinded(a.rsaKeys.PrivateKey, blindedToken)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +25,7 @@ func (a *AuthManager) SignBlindedToken(blindedToken []byte) ([]byte, error) {
 }
 
 func (a *AuthManager) VerifyUnBlindedToken(unblindedToken, signedUnblindedToken []byte) (bool, error) {
-	expectedSignedUnblindedToken, err := secrets.RSASign(a.rsaKeys.PrivateKey, unblindedToken)
+	expectedSignedUnblindedToken, err := secrets.RSASignBlinded(a.rsaKeys.PrivateKey, unblindedToken)
 	if err != nil {
 		return false, err
 	}

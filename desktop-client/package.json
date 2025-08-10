@@ -21,9 +21,12 @@
     "build:linux": "electron-vite build && electron-builder --linux"
   },
   "dependencies": {
+    "@cloudflare/blindrsa-ts": "^0.4.4",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "electron-log": "^5.4.2",
     "electron-updater": "^6.3.9",
+    "jose": "^6.0.12",
     "lucide-react": "^0.539.0"
   },
   "devDependencies": {

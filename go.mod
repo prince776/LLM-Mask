@@ -7,6 +7,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.2
 	github.com/Azure/azure-sdk-for-go/sdk/data/azcosmos v1.4.0
 	github.com/Azure/azure-sdk-for-go/sdk/keyvault/azkeys v0.10.0
+	github.com/cloudflare/circl v1.6.1
 	github.com/cockroachdb/errors v1.12.0
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/go-chi/cors v1.2.2

@@ -1,7 +1,14 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
+import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { join } from "path";
+import { electronApp, is, optimizer } from "@electron-toolkit/utils";
+import icon from "../../resources/icon.png?asset";
+import type { GenerateTokenReq, GenerateTokenResp } from "../types/ipc";
+
+
+import log from "electron-log/main";
+import { GenerateToken } from "./rsa";
+// Initialize the logger to be available in renderer process
+log.initialize();
 
 function createWindow(): void {
   // Create the browser window.
@@ -52,6 +59,18 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
+  // Add IPC handler for blinded token request
+  ipcMain.handle('generate-token', async (_event, requestData: GenerateTokenReq): Promise<GenerateTokenResp> => {
+    log.info('[IPC]: Initiated generate-token', requestData)
+    try {
+      return await GenerateToken(requestData)
+    } catch (e) {
+      log.info('[IPC]: Errored generate-token:', e)
+      return {
+        error: e,
+      }
+    }
+  })
   createWindow()
 
   app.on('activate', function () {
@@ -70,5 +89,4 @@ app.on('window-all-closed', () => {
   }
 })
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
+
