@@ -30,18 +30,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Try to load user if already signed in (with cookies)
     const fetchUser = async () => {
-      const blindedToken = await window.api.generateToken({
-        modelName: 'gemini-2.5-flash'
-      })
-      console.log('Got blinded token', blindedToken)
-      if (!blindedToken.error) {
-        const llmResp = await window.api.llmProxy({
-          token: blindedToken.token || '',
-          signedToken: blindedToken.signedToken || '',
-          modelName: 'gemini-2.5-flash'
-        })
-        console.log('Got LLM response', llmResp)
-      }
       try {
         const res = await fetch(`${SERVER_URL}/api/v1/me`, {
           method: 'GET',

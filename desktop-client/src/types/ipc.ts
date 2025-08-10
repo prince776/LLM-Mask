@@ -1,22 +1,29 @@
 // Shared IPC types for generateToken
 
+import {
+  ChatCompletion,
+  ChatCompletionMessageParam
+} from 'openai/src/resources/chat/completions/completions'
+
 export interface GenerateTokenReq {
-  modelName: string;
+  modelName: string
 }
 
 export interface GenerateTokenResp {
-  token?: string;
-  signedToken?: string;
-  error?: any;
+  token?: string
+  signedToken?: string
+  error?: any
 }
 
 export interface LLMProxyReq {
-  token: string;
-  signedToken: string;
-  modelName: string;
+  token: string
+  signedToken: string
+  modelName: string
+
+  messages: Array<ChatCompletionMessageParam>
 }
 
 export interface LLMProxyResp {
-  data?: any;
-  error?: any;
+  data?: ChatCompletion
+  error?: any
 }

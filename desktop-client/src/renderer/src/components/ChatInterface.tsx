@@ -4,11 +4,18 @@ import { ChatMessage } from './ChatMessage'
 import { ChatInput } from './ChatInput'
 import { ModelSelector } from './ModelSelector'
 import { Chat, Message } from '../types'
+import { useError } from '@renderer/contexts/ErrorContext'
+import { LLMProxyReq, LLMProxyResp } from '../../../types/ipc'
 
 interface ChatInterfaceProps {
   chat: Chat | undefined
   onSendMessage: (message: string, role: 'user' | 'assistant') => void
   onToggleSidebar: () => void
+}
+
+interface LoadingState {
+  isLoading: boolean
+  message: string
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -17,38 +24,58 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onToggleSidebar
 }) => {
   const [selectedModel, setSelectedModel] = useState('gpt-4-turbo')
-  const [isLoading, setIsLoading] = useState(false)
+  const [loadingState, setLoadingState] = useState<LoadingState>({ isLoading: false, message: '' })
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
+  const { showError } = useError()
 
   useEffect(() => {
     scrollToBottom()
   }, [chat?.messages])
 
-  const handleSendMessage = async (message: string) => {
-    setIsLoading(true)
-    onSendMessage(message, 'user')
+  const handleSendMessage = async (msg: string) => {
+    try {
+      // 1. Get auth token.
+      setLoadingState({ isLoading: true, message: 'Generating Anonymous Token...' })
+      onSendMessage(msg, 'user')
+      const blindedToken = await window.api.generateToken({
+        modelName: 'gemini-2.5-flash' // TODO: model system
+      })
+      if (blindedToken.error) {
+        throw blindedToken.error
+      }
 
-    // Simulate AI response
-    setTimeout(
-      () => {
-        const responses = [
-          "That's an interesting question! Let me think about that...",
-          "I'd be happy to help you with that. Here's what I think...",
-          'Great point! From my understanding...',
-          'Let me provide you with a detailed response to that...',
-          "That's a complex topic. Let me break it down for you..."
-        ]
+      // 2. Get LLM response.
+      setLoadingState({ isLoading: true, message: 'Getting LLM Response Anonymously...' })
 
-        const randomResponse = responses[Math.floor(Math.random() * responses.length)]
-        onSendMessage(randomResponse, 'assistant')
-        setIsLoading(false)
-      },
-      1000 + Math.random() * 2000
-    )
+      const allMessages = [...chat.messages, { role: 'user', content: msg }]
+      const llmsProxyReq: LLMProxyReq = {
+        token: blindedToken.token || '',
+        signedToken: blindedToken.signedToken || '',
+        modelName: 'gemini-2.5-flash',
+
+        messages: allMessages.map((message: Message) => ({
+          role: message.role,
+          content: message.content
+        }))
+      }
+      const llmResp: LLMProxyResp = await window.api.llmProxy(llmsProxyReq)
+      console.log('Got LLM response', llmResp)
+      if (llmResp.error || !llmResp.data) {
+        throw llmResp.error
+      }
+
+      // 3. Process response and update chat.
+      const aiMsg = llmResp.data.choices[0].message.content
+      onSendMessage(aiMsg, 'assistant')
+    } catch (e) {
+      showError('Error generating chat response', e)
+    } finally {
+      setLoadingState({ isLoading: false, message: '' })
+    }
   }
 
   return (
@@ -107,12 +134,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             {chat?.messages.map((message) => (
               <ChatMessage key={message.id} message={message} />
             ))}
-            {isLoading && (
+            {loadingState.isLoading && (
               <div className="flex gap-4 p-6 bg-gray-50 dark:bg-gray-800/50">
                 <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
                   <div className="w-4 h-4 bg-gray-400 rounded-full animate-pulse" />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 flex items-center gap-2">
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
                     <div
@@ -124,6 +151,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                       style={{ animationDelay: '0.2s' }}
                     />
                   </div>
+                  {loadingState.message && (
+                    <div className="text-sm text-gray-700 dark:text-gray-200 font-medium">
+                      {loadingState.message}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -133,7 +165,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </div>
 
       {/* Input */}
-      <ChatInput onSendMessage={handleSendMessage} disabled={!chat} isLoading={isLoading} />
+      <ChatInput
+        onSendMessage={handleSendMessage}
+        disabled={!chat}
+        isLoading={loadingState.isLoading}
+      />
     </div>
   )
 }
+
+// TODO: Render markdown response from ai correctly.
