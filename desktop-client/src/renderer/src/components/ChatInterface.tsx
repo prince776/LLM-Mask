@@ -6,6 +6,7 @@ import { ModelSelector } from './ModelSelector'
 import { Chat, Message } from '../types'
 import { useError } from '@renderer/contexts/ErrorContext'
 import { LLMProxyReq, LLMProxyResp } from '../../../types/ipc'
+import { useSettings } from '../contexts/SettingsContext'
 
 interface ChatInterfaceProps {
   chat: Chat | undefined
@@ -26,6 +27,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [selectedModel, setSelectedModel] = useState('gpt-4-turbo')
   const [loadingState, setLoadingState] = useState<LoadingState>({ isLoading: false, message: '' })
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { systemPrompt } = useSettings()
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -51,7 +53,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       // 2. Get LLM response.
       setLoadingState({ isLoading: true, message: 'Getting LLM Response Anonymously...' })
 
-      const allMessages = [...chat.messages, { role: 'user', content: msg }]
+      const allMessages = [
+        ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+        ...chat.messages,
+        { role: 'user', content: msg }
+      ]
       const llmsProxyReq: LLMProxyReq = {
         token: blindedToken.token || '',
         signedToken: blindedToken.signedToken || '',

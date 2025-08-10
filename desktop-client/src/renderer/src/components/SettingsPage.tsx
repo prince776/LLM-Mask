@@ -1,36 +1,38 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Moon, Sun, Bell, Shield, Download, Trash2 } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
+import React, { useState } from 'react'
+import { ArrowLeft, Moon, Sun, Bell, Shield, Download, Trash2 } from 'lucide-react'
+import { useTheme } from '../contexts/ThemeContext'
+import { useSettings } from '../contexts/SettingsContext'
 
 interface SettingsPageProps {
-  onBack: () => void;
+  onBack: () => void
 }
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
-  const { theme, toggleTheme } = useTheme();
-  const [notifications, setNotifications] = useState(true);
-  const [dataCollection, setDataCollection] = useState(false);
-  const [autoSave, setAutoSave] = useState(true);
+  const { theme, toggleTheme } = useTheme()
+  const { systemPrompt, setSystemPrompt } = useSettings()
+  const [notifications, setNotifications] = useState(true)
+  const [dataCollection, setDataCollection] = useState(false)
+  const [autoSave, setAutoSave] = useState(true)
 
   const handleExportChats = () => {
     // Export chat logic
-    const chats = localStorage.getItem('chats');
+    const chats = localStorage.getItem('chats')
     if (chats) {
-      const blob = new Blob([chats], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'chat-history.json';
-      a.click();
+      const blob = new Blob([chats], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'chat-history.json'
+      a.click()
     }
-  };
+  }
 
   const handleClearAllChats = () => {
     if (confirm('Are you sure you want to delete all chats? This action cannot be undone.')) {
-      localStorage.removeItem('chats');
-      window.location.reload();
+      localStorage.removeItem('chats')
+      window.location.reload()
     }
-  };
+  }
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -48,10 +50,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
 
         {/* Appearance */}
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Appearance
-          </h3>
-          
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Appearance</h3>
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {theme === 'dark' ? (
@@ -88,7 +88,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Notifications
           </h3>
-          
+
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -123,7 +123,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Privacy & Security
           </h3>
-          
+
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -179,12 +179,28 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
           </div>
         </div>
 
+        {/* System Prompt */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            System Prompt
+          </h3>
+          <textarea
+            className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[80px]"
+            value={systemPrompt}
+            onChange={(e) => setSystemPrompt(e.target.value)}
+            placeholder="Enter a system prompt to guide the assistant's behavior..."
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            This prompt will be prepended to every conversation with the assistant.
+          </p>
+        </div>
+
         {/* Data Management */}
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Data Management
           </h3>
-          
+
           <div className="space-y-3">
             <button
               onClick={handleExportChats}
@@ -193,7 +209,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
               <Download size={18} className="text-blue-600" />
               <div>
                 <p className="text-gray-900 dark:text-gray-100 font-medium">Export Chat History</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Download all your chats as JSON</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Download all your chats as JSON
+                </p>
               </div>
             </button>
 
@@ -204,12 +222,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
               <Trash2 size={18} className="text-red-600" />
               <div>
                 <p className="text-red-600 font-medium">Clear All Chats</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Permanently delete all chat history</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Permanently delete all chat history
+                </p>
               </div>
             </button>
           </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
