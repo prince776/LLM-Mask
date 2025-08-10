@@ -27,7 +27,8 @@
     "electron-log": "^5.4.2",
     "electron-updater": "^6.3.9",
     "jose": "^6.0.12",
-    "lucide-react": "^0.539.0"
+    "lucide-react": "^0.539.0",
+    "openai": "^5.12.2"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",

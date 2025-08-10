@@ -10,3 +10,13 @@ export interface GenerateTokenResp {
   error?: any;
 }
 
+export interface LLMProxyReq {
+  token: string;
+  signedToken: string;
+  modelName: string;
+}
+
+export interface LLMProxyResp {
+  data?: any;
+  error?: any;
+}

@@ -2,6 +2,7 @@ package svc
 
 import (
 	"context"
+	"encoding/base64"
 	"github.com/cockroachdb/errors"
 	"github.com/go-chi/render"
 	"llmmask/src/common"
@@ -83,6 +84,17 @@ func (s *Service) getSignedBlindedToken(ctx context.Context, user *models.User, 
 	resp := &GetSignedBlindedTokenResp{
 		ModelName:          req.ModelName,
 		SignedBlindedToken: signedBlindedToken,
+	}
+
+	authToken := &models.AuthToken{
+		DocID:     base64.StdEncoding.EncodeToString(req.BlindedToken),
+		ModelName: req.ModelName,
+		CreatedAt: time.Now().UTC(),
+		ExpiresAt: time.Now().UTC().Add(-time.Hour * 24 * 7), // Already expired.
+	}
+	err = s.dbHandler.Upsert(ctx, authToken)
+	if err != nil {
+		return nil, err
 	}
 	err = s.inMemCache.Add(cacheID, resp, time.Minute*5)
 	if err != nil {

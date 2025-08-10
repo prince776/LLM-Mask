@@ -6,6 +6,7 @@ declare global {
     electron: ElectronAPI
     api: {
       generateToken: (requestData: GenerateTokenReq) => Promise<GenerateTokenResp>
+      llmProxy: (req: LLMProxyReq) => Promise<LLMProxyResp>
     }
   }
 }

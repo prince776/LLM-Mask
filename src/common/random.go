@@ -26,6 +26,6 @@ func RandomInt(n int) int {
 }
 
 func RandomChoose[T any](t ...T) T {
-	idx := RandomInt(len(t) - 1)
+	idx := RandomInt(len(t))
 	return t[idx]
 }

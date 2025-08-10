@@ -2,38 +2,34 @@ package llm_proxy
 
 import (
 	"encoding/json"
-	"github.com/cockroachdb/errors"
 	"llmmask/src/common"
 	"llmmask/src/confs"
+	"log"
 	"net/http"
-	"strings"
 )
 
-type LLMProxyRequestBody struct {
-	Token       []byte              `json:"token"`
-	SignedToken []byte              `json:"signed_token"`
-	Headers     map[string][]string `json:"headers"`
-	DestURL     string              `json:"dest_url"`
-	HTTPMethod  string              `json:"http_method"`
-	Body        []byte              `json:"body"`
+type LLMProxyExtraBodyReq struct {
+	Token       []byte
+	SignedToken []byte
+	ModelName   string
 }
 
-func (b *LLMProxyRequestBody) ExtractIntendedModel() (confs.ModelName, error) {
-	if strings.HasPrefix(b.DestURL, "https://generativelanguage.googleapis.com") {
-		tokens := strings.Split(b.DestURL, "/")
-		modelName := tokens[len(tokens)-1]
-		modelName = strings.TrimSuffix(modelName, ":generateContent")
-		return modelName, nil
+func DestURLForModel(modelName confs.ModelName) string {
+	switch modelName {
+	case confs.ModelGemini25Flash:
+		return "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+	default:
+		log.Panicf("unknown model name: %s", modelName)
+		panic("unreachable")
 	}
-	return "", errors.New("unrecognized/unsupported model being requested.")
 }
 
-func (b *LLMProxyRequestBody) Sanitize() error {
+func (b *LLMProxyExtraBodyReq) Sanitize() error {
 	// TODO: Sanitize Errors, Content Moderation if legally required.
 	return nil
 }
 
-func (b *LLMProxyRequestBody) Bytes() []byte {
+func (b *LLMProxyExtraBodyReq) Bytes() []byte {
 	if b == nil {
 		return []byte{}
 	}
@@ -42,6 +38,6 @@ func (b *LLMProxyRequestBody) Bytes() []byte {
 	return res
 }
 
-func (b *LLMProxyRequestBody) Bind(r *http.Request) error {
+func (b *LLMProxyExtraBodyReq) Bind(r *http.Request) error {
 	return nil
 }

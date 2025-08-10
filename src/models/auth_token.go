@@ -11,8 +11,9 @@ const (
 )
 
 type AuthToken struct {
-	DocID          string `json:"id"` // Same as token.
+	DocID          string `json:"id"` // base64 of the token.
 	PartitionKey   string `json:"PartitionKey"`
+	ModelName      string
 	CreatedAt      time.Time
 	ExpiresAt      time.Time // TODO: Have a job that clears RequestHash and CachedResponse for already expired tokens. Maybe even move them to separate collection.
 	RequestHash    []byte

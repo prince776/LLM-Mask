@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"bytes"
 	"llmmask/src/secrets"
 )
 
@@ -25,13 +24,9 @@ func (a *AuthManager) SignBlindedToken(blindedToken []byte) ([]byte, error) {
 }
 
 func (a *AuthManager) VerifyUnBlindedToken(unblindedToken, signedUnblindedToken []byte) (bool, error) {
-	expectedSignedUnblindedToken, err := secrets.RSASignBlinded(a.rsaKeys.PrivateKey, unblindedToken)
+	err := secrets.RSABlindVerify(a.rsaKeys.PublicKey, unblindedToken, signedUnblindedToken)
 	if err != nil {
 		return false, err
-	}
-
-	if !bytes.Equal(expectedSignedUnblindedToken, signedUnblindedToken) {
-		return false, nil
 	}
 	return true, nil
 }

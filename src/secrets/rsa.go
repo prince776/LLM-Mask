@@ -117,6 +117,15 @@ func RSASignBlinded(privateKey *rsa.PrivateKey, msg []byte) ([]byte, error) {
 	return signedBlindedToken, nil
 }
 
+// RSABlindVerify receives a signed unblinded token from the client, and verifies it.
+func RSABlindVerify(publicKey *rsa.PublicKey, msg, signedMsg []byte) error {
+	verifier, err := blindrsa.NewVerifier(blindrsa.SHA384PSSRandomized, publicKey)
+	if err != nil {
+		return err
+	}
+	return verifier.Verify(msg, signedMsg)
+}
+
 // RSAVerify verifies a signature using the PSS padding scheme.
 // It re-hashes the original message and then verifies that the signature
 // matches the hash with the public key.

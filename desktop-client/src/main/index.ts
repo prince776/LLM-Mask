@@ -1,14 +1,14 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
-import { join } from "path";
-import { electronApp, is, optimizer } from "@electron-toolkit/utils";
-import icon from "../../resources/icon.png?asset";
-import type { GenerateTokenReq, GenerateTokenResp } from "../types/ipc";
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { join } from 'path'
+import { electronApp, is, optimizer } from '@electron-toolkit/utils'
+import icon from '../../resources/icon.png?asset'
+import type { GenerateTokenReq, GenerateTokenResp, LLMProxyReq, LLMProxyResp } from '../types/ipc'
 
-
-import log from "electron-log/main";
-import { GenerateToken } from "./rsa";
+import log from 'electron-log/main'
+import { GenerateToken } from './rsa'
+import { LLMProxy } from './llmproxy'
 // Initialize the logger to be available in renderer process
-log.initialize();
+log.initialize()
 
 function createWindow(): void {
   // Create the browser window.
@@ -59,18 +59,33 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  // Add IPC handler for blinded token request
-  ipcMain.handle('generate-token', async (_event, requestData: GenerateTokenReq): Promise<GenerateTokenResp> => {
-    log.info('[IPC]: Initiated generate-token', requestData)
+  ipcMain.handle(
+    'generate-token',
+    async (_event, requestData: GenerateTokenReq): Promise<GenerateTokenResp> => {
+      log.info('[IPC]: Initiated generate-token', requestData)
+      try {
+        return await GenerateToken(requestData)
+      } catch (e) {
+        log.info('[IPC]: Errored generate-token:', e)
+        return {
+          error: e
+        }
+      }
+    }
+  )
+
+  ipcMain.handle('llm-proxy', async (_event, requestData: LLMProxyReq): Promise<LLMProxyResp> => {
+    log.info('[IPC]: Initiated llm-proxy to', requestData.modelName)
     try {
-      return await GenerateToken(requestData)
+      return await LLMProxy(requestData)
     } catch (e) {
-      log.info('[IPC]: Errored generate-token:', e)
+      log.info('[IPC]: Errored llm-proxy:', e)
       return {
-        error: e,
+        error: e
       }
     }
   })
+
   createWindow()
 
   app.on('activate', function () {
@@ -88,5 +103,3 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
-
-

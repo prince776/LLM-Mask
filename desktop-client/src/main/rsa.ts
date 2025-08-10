@@ -4,6 +4,13 @@ import { getCookieHeader } from "./utils";
 import log from "electron-log/main";
 import { GenerateTokenReq, GenerateTokenResp } from "../types/ipc";
 
+// TODOs:
+// 1. Proper retry mechanism when requesting token/ Making LLM Proxy requests.
+// 2. Save tokens in local store.
+// 3. Store the chats in local store as well. This entire thing needs to
+//    go to proxy server in every call.
+// 4. Forward llm-proxy request via tor port.
+
 export async function GenerateToken(req: GenerateTokenReq): Promise<GenerateTokenResp> {
   const modelName = req.modelName;
   const publicKeyPEMForModel = RSAKeys[modelName];
