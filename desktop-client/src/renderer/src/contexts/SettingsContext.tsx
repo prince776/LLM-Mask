@@ -15,7 +15,20 @@ export const useSettings = () => {
 }
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
-  const [systemPrompt, setSystemPrompt] = useState('')
+  const [systemPrompt, setSystemPromptState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('systemPrompt') || ''
+    }
+    return ''
+  })
+
+  const setSystemPrompt = (prompt: string) => {
+    setSystemPromptState(prompt)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('systemPrompt', prompt)
+    }
+  }
+
   // Add more settings state here as needed
   return (
     <SettingsContext.Provider value={{ systemPrompt, setSystemPrompt }}>
