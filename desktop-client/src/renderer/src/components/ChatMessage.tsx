@@ -2,6 +2,9 @@ import React from 'react'
 import { useUser } from '../contexts/UserContext'
 import { Message } from '../types'
 import { Bot, User } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 interface ChatMessageProps {
   message: Message
@@ -35,9 +38,30 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
       {/* Message Content */}
       <div className="flex-1 min-w-0">
         <div className="prose prose-sm max-w-none dark:prose-invert">
-          <p className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
+          <ReactMarkdown
+            components={{
+              code({ node, inline, className, children, ...props }) {
+                const match = /language-(\w+)/.exec(className || '')
+                return !inline && match ? (
+                  <SyntaxHighlighter
+                    style={oneDark}
+                    language={match[1]}
+                    PreTag="div"
+                    customStyle={{ borderRadius: '0.5rem', fontSize: '0.95em', margin: 0 }}
+                    {...props}
+                  >
+                    {String(children).replace(/\n$/, '')}
+                  </SyntaxHighlighter>
+                ) : (
+                  <code className={className} {...props}>
+                    {children}
+                  </code>
+                )
+              }
+            }}
+          >
             {message.content}
-          </p>
+          </ReactMarkdown>
         </div>
         <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
           {message.timestamp.toLocaleTimeString([], {
