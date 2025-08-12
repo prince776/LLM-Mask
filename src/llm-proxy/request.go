@@ -16,7 +16,7 @@ type LLMProxyExtraBodyReq struct {
 
 func DestURLForModel(modelName confs.ModelName) string {
 	switch modelName {
-	case confs.ModelGemini25Flash:
+	case confs.ModelGemini25Flash, confs.ModelGemini25Pro:
 		return "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
 	default:
 		log.Panicf("unknown model name: %s", modelName)

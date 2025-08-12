@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Menu } from 'lucide-react'
+import { Menu, Bot } from 'lucide-react'
 import { ChatMessage } from './ChatMessage'
 import { ChatInput } from './ChatInput'
 import { ModelSelector } from './ModelSelector'
@@ -24,7 +24,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onSendMessage,
   onToggleSidebar
 }) => {
-  const [selectedModel, setSelectedModel] = useState('gpt-4-turbo')
+  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash')
   const [loadingState, setLoadingState] = useState<LoadingState>({ isLoading: false, message: '' })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { systemPrompt } = useSettings()
@@ -44,7 +44,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       setLoadingState({ isLoading: true, message: 'Generating Anonymous Token...' })
       onSendMessage(msg, 'user')
       const blindedToken = await window.api.generateToken({
-        modelName: 'gemini-2.5-flash' // TODO: model system
+        modelName: selectedModel
       })
       if (blindedToken.error) {
         throw blindedToken.error
@@ -61,7 +61,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const llmsProxyReq: LLMProxyReq = {
         token: blindedToken.token || '',
         signedToken: blindedToken.signedToken || '',
-        modelName: 'gemini-2.5-flash',
+        modelName: selectedModel,
 
         messages: allMessages.map((message: Message) => ({
           role: message.role,
@@ -114,17 +114,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="w-8 h-8 text-blue-600 dark:text-blue-400"
-                >
-                  <path
-                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3a3 3 0 110 6 3 3 0 010-6zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"
-                    fill="currentColor"
-                  />
-                </svg>
+                <Bot size={32} className="text-blue-600 dark:text-blue-400" />
               </div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                 Start a new conversation

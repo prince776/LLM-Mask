@@ -25,20 +25,15 @@ func main() {
 	ctx := context.Background()
 	Init(ctx)
 
-	gemini25FlashKeys := common.PlatformCredsConfig().Gemini25FlashAPIKeys
-	gemini25FlashKeysAsSecrets := common.Map(
-		gemini25FlashKeys,
-		func(key string) common.SecretString {
-			return common.NewSecretString(key)
-		},
-	)
-	apiKeyManager := llm_proxy.NewAPIKeyManager(
-		map[confs.ModelName][]common.SecretString{
-			confs.ModelGemini25Flash: gemini25FlashKeysAsSecrets,
-		},
-	)
+	llmAPIKeys := common.PlatformCredsConfig().LLMAPIKeys
+	apiKeys := map[confs.ModelName][]common.SecretString{}
+	for modelName, plainAPIKeys := range llmAPIKeys {
+		apiKeys[modelName] = common.Map(plainAPIKeys, common.NewSecretString)
+	}
+	apiKeyManager := llm_proxy.NewAPIKeyManager(apiKeys)
 	authManagers := map[confs.ModelName]*auth.AuthManager{
 		confs.ModelGemini25Flash: auth.NewAuthManager(secrets.GetRSAKeysForModel(confs.ModelGemini25Flash)),
+		confs.ModelGemini25Pro:   auth.NewAuthManager(secrets.GetRSAKeysForModel(confs.ModelGemini25Pro)),
 	}
 
 	dbHandler := models.DefaultDBHandler()

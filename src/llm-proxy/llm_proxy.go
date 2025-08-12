@@ -173,7 +173,7 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 	reqFwd = reqFwd.WithContext(ctx)
 
 	switch intendedModel {
-	case confs.ModelGemini25Flash:
+	case confs.ModelGemini25Flash, confs.ModelGemini25Pro:
 		reqFwd.Header.Set("x-goog-api-key", apiKey.UnsafeString())
 		reqFwd.Header.Set("Authorization", "Bearer "+apiKey.UnsafeString())
 		reqFwd.Header.Set("content-type", "application/json")
