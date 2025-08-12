@@ -1,10 +1,11 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useUser } from '../contexts/UserContext'
 import { Message } from '../types'
 import { Bot, User } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { fetchPfpWithCache } from '../utils/pfpCache'
 
 interface ChatMessageProps {
   message: Message
@@ -13,6 +14,23 @@ interface ChatMessageProps {
 export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   const isUser = message.role === 'user'
   const { user } = useUser()
+  const [pfpUrl, setPfpUrl] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    let isMounted = true
+    if (isUser && user?.picture) {
+      fetchPfpWithCache(user.picture)
+        .then((url) => {
+          if (isMounted) setPfpUrl(url)
+        })
+        .catch(() => setPfpUrl(undefined))
+    } else {
+      setPfpUrl(undefined)
+    }
+    return () => {
+      isMounted = false
+    }
+  }, [isUser, user?.picture])
 
   return (
     <div
@@ -21,8 +39,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
       {/* Avatar */}
       <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center overflow-hidden bg-gray-200 dark:bg-gray-700">
         {isUser ? (
-          user?.picture ? (
-            <img src={user.picture} alt="User avatar" className="w-8 h-8 object-cover" />
+          user?.picture && pfpUrl ? (
+            <img src={pfpUrl} alt="User avatar" className="w-8 h-8 object-cover" />
           ) : (
             <div className="w-8 h-8 bg-blue-600 flex items-center justify-center rounded-full">
               <User size={16} className="text-white" />

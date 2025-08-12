@@ -25,7 +25,6 @@ export const useChats = () => {
   useEffect(() => {
     // Load chats from localStorage or initialize with sample data
     const savedChats = localStorage.getItem('chats')
-    console.log('Loading chats from localStorage:', savedChats)
     let allChats: Chat[] = []
     if (savedChats) {
       const parsedChats = JSON.parse(savedChats)
@@ -35,7 +34,6 @@ export const useChats = () => {
         allChats = parsedChats
       }
     }
-    console.log('Decided allchats:', allChats)
     setChats(
       allChats.map((chat: any) => ({
         ...chat,
