@@ -1,45 +1,44 @@
 export interface Message {
-  id: string;
-  content: string;
-  role: 'user' | 'assistant';
-  timestamp: Date;
+  id: string
+  content: string
+  role: 'user' | 'assistant'
+  timestamp: Date
 }
 
 export interface Chat {
-  id: string;
-  title: string;
-  messages: Message[];
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  title: string
+  messages: Message[]
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface LLMModel {
-  id: string;
-  name: string;
-  provider: string;
-  description: string;
+  id: string
+  name: string
+  provider: string
+  description: string
 }
 
 export interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
+  id: string
+  name: string
+  email: string
+  avatar?: string
   preferences: {
-    defaultModel: string;
-    temperature: number;
-    maxTokens: number;
-  };
+    defaultModel: string
+    temperature: number
+    maxTokens: number
+  }
   tokenBalances: {
-    [modelId: string]: number;
-  };
+    [modelId: string]: number
+  }
 }
 
 export interface TokenPackage {
-  id: string;
-  modelId: string;
-  modelName: string;
-  tokens: number;
-  price: number;
-  popular?: boolean;
+  ID: string
+  ModelID: string
+  Tokens: number
+  Price: string
+  Popular: boolean
 }

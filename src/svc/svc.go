@@ -99,6 +99,7 @@ func (s *Service) Run() {
 			r.Post("/auth-token/{modelName}", s.GetSignedBlindedTokenHandler)
 		})
 		r.Post("/llm-proxy", s.LLMProxyHandler)
+		r.Get("/model-pricing", s.GetModelPricingHandler)
 	})
 
 	// Serve React static files (from React build directory)

@@ -1,46 +1,64 @@
-import React, { useState } from 'react';
-import { ArrowLeft, CreditCard, Check, Star, Zap, Shield, Clock } from 'lucide-react';
-import { tokenPackages } from '../data/tokenPackages';
-import { availableModels } from '../data/models';
-import { TokenPackage } from '../types';
+import React, { useState, useEffect } from 'react'
+import { ArrowLeft, CreditCard, Check, Star, Zap, Shield, Clock } from 'lucide-react'
+import { availableModels } from '../data/models'
+import { TokenPackage } from '../types'
+import { useUser } from '../contexts/UserContext'
+import { fetchWithCache } from '../utils/pfpCache'
+import { SERVER_URL } from '../config'
 
 interface PurchaseTokensPageProps {
-  onBack: () => void;
+  onBack: () => void
 }
 
 export const PurchaseTokensPage: React.FC<PurchaseTokensPageProps> = ({ onBack }) => {
-  const [selectedModel, setSelectedModel] = useState<string>('all');
-  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>('all')
+  const [selectedPackage, setSelectedPackage] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const { user } = useUser()
+  const [packages, setPackages] = useState<TokenPackage[]>([])
 
-  const filteredPackages = selectedModel === 'all' 
-    ? tokenPackages 
-    : tokenPackages.filter(pkg => pkg.modelId === selectedModel);
+  useEffect(() => {
+    fetchWithCache(`${SERVER_URL}/api/v1/model-pricing`, 1)
+      .then((resp) => {
+        console.log(resp.data)
+        const data: { Packages: TokenPackage[] } = resp.data
+        setPackages(data.Packages)
+      })
+      .catch(() => setPackages([]))
+  }, [])
 
-  const groupedPackages = filteredPackages.reduce((acc, pkg) => {
-    if (!acc[pkg.modelId]) {
-      acc[pkg.modelId] = [];
-    }
-    acc[pkg.modelId].push(pkg);
-    return acc;
-  }, {} as Record<string, TokenPackage[]>);
+  console.log('packages: ', packages)
+  const filteredPackages =
+    selectedModel === 'all' ? packages : packages.filter((pkg) => pkg.ModelID === selectedModel)
+  console.log('Filtered: ', filteredPackages)
+
+  const groupedPackages = filteredPackages.reduce(
+    (acc, pkg) => {
+      if (!acc[pkg.ModelID]) {
+        acc[pkg.ModelID] = []
+      }
+      acc[pkg.ModelID].push(pkg)
+      return acc
+    },
+    {} as Record<string, TokenPackage[]>
+  )
 
   const handlePurchase = async (packageId: string) => {
-    setSelectedPackage(packageId);
-    setIsProcessing(true);
-    
+    setSelectedPackage(packageId)
+    setIsProcessing(true)
+
     // Simulate payment processing
     setTimeout(() => {
-      setIsProcessing(false);
-      setSelectedPackage(null);
+      setIsProcessing(false)
+      setSelectedPackage(null)
       // Show success message or redirect
-      alert('Purchase successful! Tokens have been added to your account.');
-    }, 2000);
-  };
+      alert('Purchase successful! Tokens have been added to your account.')
+    }, 2000)
+  }
 
   const getModelInfo = (modelId: string) => {
-    return availableModels.find(model => model.id === modelId);
-  };
+    return availableModels.find((model) => model.id === modelId)
+  }
 
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
@@ -61,32 +79,36 @@ export const PurchaseTokensPage: React.FC<PurchaseTokensPageProps> = ({ onBack }
           </div>
         </div>
 
-        {/* Benefits Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 mb-8 text-white">
-          <h2 className="text-2xl font-bold mb-4">Why Purchase Tokens?</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="flex items-start gap-3">
-              <Zap className="w-6 h-6 mt-1 flex-shrink-0" />
-              <div>
-                <h3 className="font-semibold mb-1">Faster Responses</h3>
-                <p className="text-blue-100 text-sm">Priority access to AI models with reduced wait times</p>
+        {/* Balances Section */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">
+            Token Balances
+          </h2>
+          <div className="flex flex-wrap gap-4">
+            {availableModels.map((model) => (
+              <div
+                key={model.id}
+                className="bg-white dark:bg-gray-800 rounded-lg px-4 py-2 shadow border border-gray-200 dark:border-gray-700 flex flex-col min-w-[180px]"
+              >
+                <span className="font-medium text-gray-900 dark:text-white">{model.name}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{model.provider}</span>
+                <span className="text-sm mt-1 text-blue-600 dark:text-blue-400 font-semibold">
+                  {user?.numActiveToken?.[model.id] ?? 0} tokens left
+                </span>
               </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Shield className="w-6 h-6 mt-1 flex-shrink-0" />
-              <div>
-                <h3 className="font-semibold mb-1">Premium Features</h3>
-                <p className="text-blue-100 text-sm">Access to advanced models and higher token limits</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <Clock className="w-6 h-6 mt-1 flex-shrink-0" />
-              <div>
-                <h3 className="font-semibold mb-1">No Expiration</h3>
-                <p className="text-blue-100 text-sm">Tokens never expire and roll over month to month</p>
-              </div>
-            </div>
+            ))}
           </div>
+        </div>
+
+        {/* Benefits Section */}
+        <div className="bg-gray-100 dark:bg-gray-900/60 rounded-2xl p-6 mb-8 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">
+            Why Purchase Tokens?
+          </h2>
+          <p className="text-base text-gray-600 dark:text-gray-400">
+            To truly access LLMs privately, the BlindRSA Algorithm requires pre-purchase of tokens,
+            which can be later used, at any point of time. It's different, because it's real
+          </p>
         </div>
 
         {/* Model Filter */}
@@ -124,9 +146,12 @@ export const PurchaseTokensPage: React.FC<PurchaseTokensPageProps> = ({ onBack }
         {/* Token Packages */}
         <div className="space-y-8">
           {Object.entries(groupedPackages).map(([modelId, packages]) => {
-            const modelInfo = getModelInfo(modelId);
+            const modelInfo = getModelInfo(modelId)
             return (
-              <div key={modelId} className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+              <div
+                key={modelId}
+                className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700"
+              >
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
                     <Zap className="w-6 h-6 text-white" />
@@ -144,14 +169,14 @@ export const PurchaseTokensPage: React.FC<PurchaseTokensPageProps> = ({ onBack }
                 <div className="grid md:grid-cols-3 gap-4">
                   {packages.map((pkg) => (
                     <div
-                      key={pkg.id}
+                      key={pkg.ID}
                       className={`relative p-6 rounded-xl border-2 transition-all duration-200 hover:shadow-lg ${
-                        pkg.popular
+                        pkg.Popular
                           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/10'
                           : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50'
                       }`}
                     >
-                      {pkg.popular && (
+                      {pkg.Popular && (
                         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                           <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
                             <Star size={12} />
@@ -162,45 +187,45 @@ export const PurchaseTokensPage: React.FC<PurchaseTokensPageProps> = ({ onBack }
 
                       <div className="text-center mb-4">
                         <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                          ${pkg.price}
+                          {pkg.Price}
                         </div>
                         <div className="text-gray-600 dark:text-gray-400 text-sm">
-                          {pkg.tokens.toLocaleString()} tokens
+                          {pkg.Tokens.toLocaleString()} tokens
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                          ${(pkg.price / pkg.tokens * 1000).toFixed(2)} per 1K tokens
-                        </div>
+                        {/*<div className="text-xs text-gray-500 dark:text-gray-500 mt-1">*/}
+                        {/*  ${((pkg.Price/ pkg.tokens) * 1000).toFixed(2)} per 1K tokens*/}
+                        {/*</div>*/}
                       </div>
 
                       <div className="space-y-2 mb-6">
                         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                           <Check size={16} className="text-green-500" />
-                          {pkg.tokens.toLocaleString()} request tokens
+                          {pkg.Tokens.toLocaleString()} request tokens
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                           <Check size={16} className="text-green-500" />
                           No expiration date
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                          <Check size={16} className="text-green-500" />
-                          Priority support
-                        </div>
+                        {/*<div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">*/}
+                        {/*  <Check size={16} className="text-green-500" />*/}
+                        {/*/!*  Priority support*!/ LOOL*/}
+                        {/*</div>*/}
                       </div>
 
                       <button
-                        onClick={() => handlePurchase(pkg.id)}
-                        disabled={isProcessing && selectedPackage === pkg.id}
+                        onClick={() => handlePurchase(pkg.ID)}
+                        disabled={isProcessing && selectedPackage === pkg.ID}
                         className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                          pkg.popular
+                          pkg.Popular
                             ? 'bg-blue-600 hover:bg-blue-700 text-white'
                             : 'bg-gray-900 dark:bg-gray-600 hover:bg-gray-800 dark:hover:bg-gray-500 text-white'
                         } ${
-                          isProcessing && selectedPackage === pkg.id
+                          isProcessing && selectedPackage === pkg.ID
                             ? 'opacity-50 cursor-not-allowed'
                             : ''
                         }`}
                       >
-                        {isProcessing && selectedPackage === pkg.id ? (
+                        {isProcessing && selectedPackage === pkg.ID ? (
                           <>
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                             Processing...
@@ -216,7 +241,7 @@ export const PurchaseTokensPage: React.FC<PurchaseTokensPageProps> = ({ onBack }
                   ))}
                 </div>
               </div>
-            );
+            )
           })}
         </div>
 
@@ -229,8 +254,8 @@ export const PurchaseTokensPage: React.FC<PurchaseTokensPageProps> = ({ onBack }
             </h3>
           </div>
           <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-            Your payment information is encrypted and processed securely. We use industry-standard SSL encryption 
-            and never store your credit card details on our servers.
+            Your payment information is encrypted and processed securely. We use industry-standard
+            SSL encryption and never store your credit card details on our servers.
           </p>
           <div className="flex items-center gap-6 text-xs text-gray-500 dark:text-gray-400">
             <div className="flex items-center gap-1">
@@ -249,5 +274,5 @@ export const PurchaseTokensPage: React.FC<PurchaseTokensPageProps> = ({ onBack }
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

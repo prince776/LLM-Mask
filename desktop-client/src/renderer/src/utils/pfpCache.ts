@@ -5,7 +5,6 @@ const pfpCache = new Map<string, string>()
 const pfpMutex = new Map<string, Promise<string>>()
 
 export async function fetchPfpWithCache(url: string): Promise<string> {
-  console.log('requesting fetch' + crypto.randomUUID())
   if (pfpCache.has(url)) {
     return pfpCache.get(url)!
   }
@@ -18,7 +17,6 @@ export async function fetchPfpWithCache(url: string): Promise<string> {
     try {
       const resp = await fetch(url)
       if (!resp.ok) throw new Error('Failed to fetch pfp')
-      console.log('requesting blob:', crypto.randomUUID())
       const blob = await resp.blob()
       const objectUrl = URL.createObjectURL(blob)
       pfpCache.set(url, objectUrl)
@@ -29,4 +27,21 @@ export async function fetchPfpWithCache(url: string): Promise<string> {
   })()
   pfpMutex.set(url, fetchPromise)
   return fetchPromise
+}
+
+// Cached fetch utility for model pricing catalogue
+export async function fetchWithCache(url: string, ttlMs: number) {
+  const cacheKey = `cache_${url}`
+  const cached = localStorage.getItem(cacheKey)
+  if (cached) {
+    const { data, timestamp } = JSON.parse(cached)
+    if (Date.now() - timestamp < ttlMs) {
+      return data
+    }
+  }
+  const resp = await fetch(url)
+  if (!resp.ok) throw new Error('Failed to fetch: ' + url)
+  const data = await resp.json()
+  localStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }))
+  return data
 }
