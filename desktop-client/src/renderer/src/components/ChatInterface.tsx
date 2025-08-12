@@ -7,6 +7,7 @@ import { Chat, Message } from '../types'
 import { useError } from '@renderer/contexts/ErrorContext'
 import { LLMProxyReq, LLMProxyResp } from '../../../types/ipc'
 import { useSettings } from '../contexts/SettingsContext'
+import { useUser } from '../contexts/UserContext'
 
 interface ChatInterfaceProps {
   chat: Chat | undefined
@@ -28,11 +29,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [loadingState, setLoadingState] = useState<LoadingState>({ isLoading: false, message: '' })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { systemPrompt } = useSettings()
+  const { showError } = useError()
+  const { user, decrementToken } = useUser()
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
-  const { showError } = useError()
 
   useEffect(() => {
     scrollToBottom()
@@ -77,6 +79,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       // 3. Process response and update chat.
       const aiMsg = llmResp.data.choices[0].message.content
       onSendMessage(aiMsg, 'assistant')
+      decrementToken(selectedModel)
     } catch (e) {
       showError('Error generating chat response', e)
     } finally {
@@ -105,7 +108,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </div>
         </div>
 
-        <ModelSelector selectedModel={selectedModel} onModelSelect={setSelectedModel} />
+        <ModelSelector
+          selectedModel={selectedModel}
+          onModelSelect={setSelectedModel}
+          numActiveToken={user?.numActiveToken}
+        />
       </div>
 
       {/* Messages */}
