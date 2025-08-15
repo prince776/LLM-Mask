@@ -15,6 +15,7 @@ interface UserContextType {
   signIn: () => Promise<void>
   signOut: () => void
   decrementToken: (model: string) => void
+  isLoading: boolean
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined)
@@ -27,6 +28,7 @@ export const useUser = () => {
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const { showError } = useError()
 
   const decrementToken = (model: string) => {
@@ -46,6 +48,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Try to load user if already signed in (with cookies)
     const fetchUser = async () => {
+      setIsLoading(true)
       try {
         const res = await fetch(`${SERVER_URL}/api/v1/me`, {
           method: 'GET',
@@ -72,6 +75,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (e) {
         showError('Fetch user failed, err: ' + e)
+      } finally {
+        setIsLoading(false)
       }
     }
     fetchUser()
@@ -84,7 +89,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const signOut = () => setUser(null)
 
   return (
-    <UserContext.Provider value={{ user, signIn, signOut, decrementToken }}>
+    <UserContext.Provider value={{ user, signIn, signOut, decrementToken, isLoading }}>
       {children}
     </UserContext.Provider>
   )

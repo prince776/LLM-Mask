@@ -8,6 +8,7 @@ import { PurchaseTokensPage } from './components/PurchaseTokensPage'
 import { useChats } from './hooks/useChats'
 import { useUser } from './contexts/UserContext'
 import { SettingsProvider } from './contexts/SettingsContext'
+import { Loader2 } from 'lucide-react'
 
 type Page = 'chat' | 'profile' | 'settings' | 'purchase-tokens'
 
@@ -25,7 +26,7 @@ function App() {
     getCurrentChat
   } = useChats()
 
-  const { user } = useUser()
+  const { user, isLoading } = useUser()
 
   const handleSendMessage = (content: string, role: 'user' | 'assistant') => {
     if (!activeChat) {
@@ -53,6 +54,17 @@ function App() {
           />
         )
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen w-screen bg-gray-50 dark:bg-gray-900">
+        <Loader2 className="animate-spin text-blue-500 mb-4" size={48} />
+        <div className="text-gray-700 dark:text-gray-300 text-lg font-medium">
+          Fetching your profile
+        </div>
+      </div>
+    )
   }
 
   return (

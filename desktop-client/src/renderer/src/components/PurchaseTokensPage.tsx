@@ -18,7 +18,7 @@ export const PurchaseTokensPage: React.FC<PurchaseTokensPageProps> = ({ onBack }
   const [packages, setPackages] = useState<TokenPackage[]>([])
 
   useEffect(() => {
-    fetchWithCache(`${SERVER_URL}/api/v1/model-pricing`, 1)
+    fetchWithCache(`${SERVER_URL}/api/v1/model-pricing`, 10000)
       .then((resp) => {
         console.log(resp.data)
         const data: { Packages: TokenPackage[] } = resp.data

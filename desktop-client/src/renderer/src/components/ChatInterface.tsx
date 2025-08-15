@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Menu, Bot } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { ChatMessage } from './ChatMessage'
 import { ChatInput } from './ChatInput'
 import { ModelSelector } from './ModelSelector'
@@ -51,6 +51,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       if (blindedToken.error) {
         throw blindedToken.error
       }
+      decrementToken(selectedModel)
 
       // 2. Get LLM response.
       setLoadingState({ isLoading: true, message: 'Getting LLM Response Anonymously...' })
@@ -79,7 +80,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       // 3. Process response and update chat.
       const aiMsg = llmResp.data.choices[0].message.content
       onSendMessage(aiMsg, 'assistant')
-      decrementToken(selectedModel)
     } catch (e) {
       showError('Error generating chat response', e)
     } finally {
@@ -121,14 +121,34 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Bot size={32} className="text-blue-600 dark:text-blue-400" />
+                {/* Enlarged custom mask SVG for anonymity */}
+                <svg
+                  width="56"
+                  height="56"
+                  viewBox="0 0 56 56"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <ellipse cx="28" cy="28" rx="25" ry="16" fill="#2563eb" fillOpacity="0.15" />
+                  <path
+                    d="M13 28c0 7.5 6.5 14 15 14s15-6.5 15-14c0-3-1.5-6-4-8.5C36.5 15.5 32 15 28 15s-8.5.5-11 4.5C14.5 22 13 25 13 28z"
+                    fill="#2563eb"
+                  />
+                  <ellipse cx="21.5" cy="30.5" rx="2.2" ry="3" fill="#fff" />
+                  <ellipse cx="34.5" cy="30.5" rx="2.2" ry="3" fill="#fff" />
+                  <path
+                    d="M23 36c1.5.7 3 .7 5 .7s3.5 0 5-.7"
+                    stroke="#fff"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
+                </svg>
               </div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Start a new conversation
+                Start A New Anonymous Conversation
               </h2>
               <p className="text-gray-500 dark:text-gray-400 max-w-md">
-                Ask me anything! I'm here to help you with information, creative tasks,
-                problem-solving, and more.
+                Not even LLMMask can see you. No tracking. No records. Cryptographically Secure.
               </p>
             </div>
           </div>
