@@ -6,6 +6,8 @@ import (
 )
 
 type LLMProxyResponse struct {
+	IsBlocked     bool   `json:"is_blocked"`
+	BlockedReason string `json:"blocked_reason"`
 	Metadata      []byte `json:"metadata"`
 	ProxyResponse []byte `json:"proxy_response"`
 }

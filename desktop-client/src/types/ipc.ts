@@ -25,5 +25,7 @@ export interface LLMProxyReq {
 
 export interface LLMProxyResp {
   data?: ChatCompletion
+  blocked?: boolean
+  blockReason?: string
   error?: any
 }

@@ -9,3 +9,7 @@ func MaxRPSPerUser(ctx context.Context) int {
 func MaxRPSPerIp(ctx context.Context) int {
 	return 10000
 }
+
+func MaxOffensiveContentSeverity(ctx context.Context) int {
+	return 2
+}

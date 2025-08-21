@@ -21,16 +21,19 @@ import (
 // LLMProxy will be responsible for proxying requests, and also all the bookkeeping related to them.
 // This is needed to stop replay attacks, and also stop wastage of tokens in case of network errors.
 type LLMProxy struct {
-	apiKeyManager *APIKeyManager
-	authManagers  map[confs.ModelName]*auth.AuthManager
-	dbHandler     *models.DBHandler
+	apiKeyManager    *APIKeyManager
+	authManagers     map[confs.ModelName]*auth.AuthManager
+	dbHandler        *models.DBHandler
+	contentModerator *ContentModerator
 }
 
-func NewLLMProxy(authManagers map[confs.ModelName]*auth.AuthManager, apiKeyManager *APIKeyManager, dbHandler *models.DBHandler) *LLMProxy {
+func NewLLMProxy(authManagers map[confs.ModelName]*auth.AuthManager, apiKeyManager *APIKeyManager, dbHandler *models.DBHandler,
+	contentModerator *ContentModerator) *LLMProxy {
 	return &LLMProxy{
-		authManagers:  authManagers,
-		apiKeyManager: apiKeyManager,
-		dbHandler:     dbHandler,
+		authManagers:     authManagers,
+		apiKeyManager:    apiKeyManager,
+		dbHandler:        dbHandler,
+		contentModerator: contentModerator,
 	}
 }
 
@@ -164,40 +167,62 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 		return resp, err
 	}
 
-	reqFwd := &http.Request{
-		Method: "POST",
-		URL:    destURL,
-		Header: r.Header,
-		Body:   io.NopCloser(bytes.NewReader(proxyReqBody)),
+	// Content Moderation:
+	analyzeResp, err := l.contentModerator.AnalyzeText(ctx, string(proxyReqBody))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to analyze text")
 	}
-	reqFwd = reqFwd.WithContext(ctx)
-
-	switch intendedModel {
-	case confs.ModelGemini25Flash, confs.ModelGemini25Pro:
-		reqFwd.Header.Set("x-goog-api-key", apiKey.UnsafeString())
-		reqFwd.Header.Set("Authorization", "Bearer "+apiKey.UnsafeString())
-		reqFwd.Header.Set("content-type", "application/json")
-		// TODO: Removing gzip for now, use it later.
-		reqFwd.Header.Set("Accept-Encoding", "identity")
+	isOffensive := false
+	for _, analysis := range analyzeResp.CategoriesAnalysis {
+		if analysis.Severity > confs.MaxOffensiveContentSeverity(ctx) {
+			isOffensive = true
+		}
 	}
 
-	proxyResp, err := http.DefaultClient.Do(reqFwd)
-	if err != nil {
-		return nil, err
+	resp := &LLMProxyResponse{}
+	if isOffensive {
+		resp = &LLMProxyResponse{
+			IsBlocked:     true,
+			BlockedReason: string(common.Must(json.Marshal(analyzeResp.CategoriesAnalysis))),
+		}
+		log.Infof(ctx, "Blocked due to offensive")
+	} else {
+		reqFwd := &http.Request{
+			Method: "POST",
+			URL:    destURL,
+			Header: r.Header,
+			Body:   io.NopCloser(bytes.NewReader(proxyReqBody)),
+		}
+		reqFwd = reqFwd.WithContext(ctx)
+
+		switch intendedModel {
+		case confs.ModelGemini25Flash, confs.ModelGemini25Pro:
+			reqFwd.Header.Set("x-goog-api-key", apiKey.UnsafeString())
+			reqFwd.Header.Set("Authorization", "Bearer "+apiKey.UnsafeString())
+			reqFwd.Header.Set("content-type", "application/json")
+			// TODO: Removing gzip for now, use it later.
+			reqFwd.Header.Set("Accept-Encoding", "identity")
+		}
+
+		proxyResp, err := http.DefaultClient.Do(reqFwd)
+		if err != nil {
+			return nil, err
+		}
+
+		proxyRespBytes, err := io.ReadAll(proxyResp.Body)
+		if err != nil {
+			return nil, err
+		}
+		err = proxyResp.Body.Close()
+		if err != nil {
+			return nil, err
+		}
+		resp = &LLMProxyResponse{
+			Metadata:      []byte("lgtm"),
+			ProxyResponse: proxyRespBytes,
+		}
 	}
 
-	proxyRespBytes, err := io.ReadAll(proxyResp.Body)
-	if err != nil {
-		return nil, err
-	}
-	err = proxyResp.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-	resp := &LLMProxyResponse{
-		Metadata:      []byte("lgtm"),
-		ProxyResponse: proxyRespBytes,
-	}
 	authToken.CachedResponse = resp.Bytes()
 	err = l.dbHandler.Upsert(ctx, authToken)
 	if err != nil {

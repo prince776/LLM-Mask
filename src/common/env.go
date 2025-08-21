@@ -42,10 +42,11 @@ func PlatformCredsConfig() *CredsConfig {
 }
 
 type CredsConfig struct {
-	Cosmos          *CosmosDBCredsConfig `json:"cosmos"`
-	LLMAPIKeys      map[string][]string  `json:"llm_api_keys"`
-	KeyVaultCreds   *KeyVaultCredsConfig `json:"key_vault_creds"`
-	ModelToKeyNames map[string]string    `json:"model_to_key_names"`
+	Cosmos                 *CosmosDBCredsConfig    `json:"cosmos"`
+	LLMAPIKeys             map[string][]string     `json:"llm_api_keys"`
+	KeyVaultCreds          *KeyVaultCredsConfig    `json:"key_vault_creds"`
+	ModelToKeyNames        map[string]string       `json:"model_to_key_names"`
+	ContentModeratorConfig *ContentModeratorConfig `json:"content_moderator_config"`
 }
 
 type KeyVaultCredsConfig struct {
@@ -59,6 +60,11 @@ type KeyVaultCredsConfig struct {
 type CosmosDBCredsConfig struct {
 	DatabaseName     string `json:"database_name"`
 	ConnectionString string `json:"connection_string"`
+}
+
+type ContentModeratorConfig struct {
+	Endpoint string `json:"endpoint"`
+	APIKey   string `json:"api_key"`
 }
 
 var userOauthConf *oauth2.Config

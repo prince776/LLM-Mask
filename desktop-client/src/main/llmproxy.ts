@@ -35,8 +35,23 @@ export async function LLMProxy(req: LLMProxyReq): Promise<LLMProxyResp> {
 
     const proxyResp = response as unknown as {
       status: string
-      data: { metadata: string; proxy_response: string }
+      data: {
+        metadata: string
+        proxy_response: string
+        is_blocked: boolean
+        blocked_reason?: string
+      }
     }
+
+    if (proxyResp.data.is_blocked) {
+      log.warn('LLM Proxy request blocked:', proxyResp.data.blocked_reason)
+      return {
+        data: undefined,
+        blocked: true,
+        blockReason: proxyResp.data.blocked_reason || 'Blocked by LLM Proxy'
+      }
+    }
+
     log.info('proxyresp:', proxyResp)
     const respBase64 = proxyResp.data.proxy_response
     const respStr = Buffer.from(respBase64, 'base64').toString('binary')

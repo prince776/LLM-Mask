@@ -46,12 +46,13 @@ func NewService(
 	authManagers map[confs.ModelName]*auth.AuthManager,
 	apiKeyManager *llm_proxy.APIKeyManager,
 	dbHandler *models.DBHandler,
+	contentModerator *llm_proxy.ContentModerator,
 ) *Service {
 	return &Service{
 		port:         port,
 		inMemCache:   *cache.New(10*time.Minute, 20*time.Minute),
 		authManagers: authManagers,
-		llmProxy:     llm_proxy.NewLLMProxy(authManagers, apiKeyManager, dbHandler),
+		llmProxy:     llm_proxy.NewLLMProxy(authManagers, apiKeyManager, dbHandler, contentModerator),
 		dbHandler:    dbHandler,
 	}
 }

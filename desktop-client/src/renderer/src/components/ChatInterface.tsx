@@ -73,6 +73,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       }
       const llmResp: LLMProxyResp = await window.api.llmProxy(llmsProxyReq)
       console.log('Got LLM response', llmResp)
+      if (llmResp.blocked) {
+        showError(`Request Blocked: ${llmResp.blockReason ?? 'Unknown reason'}`)
+        return
+      }
       if (llmResp.error || !llmResp.data) {
         throw llmResp.error
       }
