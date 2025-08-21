@@ -14,7 +14,6 @@ export async function LLMProxy(req: LLMProxyReq): Promise<LLMProxyResp> {
 
   try {
     // Make a request to the OpenAI API using the provided model name
-    // TODO: Add support for system message.
     log.info('Making LLM Proxy request with model:', modelName, 'and messages:', req.messages)
     const response = await openai.chat.completions.create(
       {

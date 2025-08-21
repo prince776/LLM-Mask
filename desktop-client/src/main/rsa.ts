@@ -4,9 +4,9 @@ import { getCookieHeader } from './utils'
 import log from 'electron-log/main'
 import { GenerateTokenReq, GenerateTokenResp } from '../types/ipc'
 
-// TODOs:
+// TODO: Improvements
 // 1. Proper retry mechanism when requesting token/ Making LLM Proxy requests.
-// 2. Save tokens in local store.
+// 2. Save tokens in local store (request more than 1 to obfuscate usage patterns).
 // 3. Store the chats in local store as well. This entire thing needs to
 //    go to proxy server in every call.
 // 4. Forward llm-proxy request via tor port.

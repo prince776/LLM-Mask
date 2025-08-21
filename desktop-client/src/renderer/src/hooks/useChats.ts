@@ -24,7 +24,10 @@ export const useChats = () => {
 
   useEffect(() => {
     // Load chats from localStorage or initialize with sample data
-    const savedChats = localStorage.getItem('chats')
+    let savedChats = localStorage.getItem('chats')
+    if (!savedChats) {
+      savedChats = '[]' // Handle case where localStorage is empty
+    }
     let allChats: Chat[] = []
     if (savedChats) {
       const parsedChats = JSON.parse(savedChats)

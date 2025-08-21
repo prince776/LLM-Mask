@@ -196,5 +196,3 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     </div>
   )
 }
-
-// TODO: Render markdown response from ai correctly.
