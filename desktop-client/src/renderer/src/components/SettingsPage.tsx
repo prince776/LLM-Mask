@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { ArrowLeft, Moon, Sun, Bell, Shield, Download, Trash2 } from 'lucide-react'
+import { ArrowLeft, Moon, Sun, Bell, Shield, Download, Trash2, Upload } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import { useSettings } from '../contexts/SettingsContext'
 
@@ -31,6 +31,26 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
     if (confirm('Are you sure you want to delete all chats? This action cannot be undone.')) {
       localStorage.removeItem('chats')
       window.location.reload()
+    }
+  }
+
+  const handleImportChats = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    try {
+      const text = await file.text()
+      const importedChats = JSON.parse(text)
+      const existingChats = JSON.parse(localStorage.getItem('chats') || '[]')
+      // Merge arrays if both are arrays, else fallback to imported
+      const mergedChats =
+        Array.isArray(existingChats) && Array.isArray(importedChats)
+          ? [...existingChats, ...importedChats]
+          : importedChats
+      localStorage.setItem('chats', JSON.stringify(mergedChats))
+      alert('Chats imported successfully!')
+      window.location.reload()
+    } catch (err) {
+      alert('Failed to import chats: Invalid file or format.')
     }
   }
 
@@ -214,6 +234,22 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
                 </p>
               </div>
             </button>
+
+            <label className="w-full flex items-center gap-3 p-3 text-left hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors cursor-pointer">
+              <Upload size={18} className="text-green-600" />
+              <div>
+                <p className="text-green-600 font-medium">Import Chats</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Append chats from a JSON file
+                </p>
+              </div>
+              <input
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={handleImportChats}
+              />
+            </label>
 
             <button
               onClick={handleClearAllChats}
