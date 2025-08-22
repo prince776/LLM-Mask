@@ -1,16 +1,36 @@
 package secrets
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"io"
+	"llmmask/src/common"
+	"llmmask/src/models"
+)
+
+const (
+	userCredsDEKID = "user-creds-dek"
 )
 
 // TODO: Get From KMS.
-var userCredsSecretKey = "cwGwXuzvcp749tSmPdbXXp1BqRZUcppf"
+var userCredsDEKStr string
+
+func InitPlatformDEKs(ctx context.Context) {
+	dbHandler := models.DefaultDBHandler()
+	kms := DefaultKMS()
+
+	userCredsDEK := &models.DEK{
+		DocID: userCredsDEKID,
+	}
+	common.Must2(dbHandler.Fetch(ctx, userCredsDEK))
+
+	unwrappedDEKValue := common.Must(kms.Decrypt(ctx, string(userCredsDEK.DEKWrapped), userCredsDEK.KMSKeyID))
+	userCredsDEKStr = string(unwrappedDEKValue)
+}
 
 func NewRandomAESKey() ([]byte, error) {
 	res := make([]byte, 32)
@@ -25,11 +45,11 @@ func NewRandomAESKey() ([]byte, error) {
 }
 
 func EncryptUserCreds(userData string) (string, error) {
-	return EncryptAES(userData, userCredsSecretKey)
+	return EncryptAES(userData, userCredsDEKStr)
 }
 
 func DecryptUserData(userDataEncrypted string) (string, error) {
-	return DecryptAES(userDataEncrypted, userCredsSecretKey)
+	return DecryptAES(userDataEncrypted, userCredsDEKStr)
 }
 
 // EncryptAES encrypts plain text using a key and returns the base64 encoded cipher text.

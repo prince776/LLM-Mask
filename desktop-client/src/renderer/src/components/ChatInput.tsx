@@ -5,12 +5,14 @@ interface ChatInputProps {
   onSendMessage: (message: string) => void
   disabled?: boolean
   isLoading?: boolean
+  disabledText?: string
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage,
   disabled = false,
-  isLoading = false
+  isLoading = false,
+  disabledText
 }) => {
   const [message, setMessage] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -46,7 +48,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type your message here..."
+            placeholder={disabled && disabledText ? disabledText : 'Type your message here...'}
             disabled={disabled || isLoading}
             rows={1}
             className={`

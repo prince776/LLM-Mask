@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { ArrowLeft, User, Mail, Save, Camera } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import { fetchPfpWithCache } from '../utils/pfpCache'
+import { SERVER_URL } from '../config'
 
 interface ProfilePageProps {
   onBack: () => void
@@ -104,6 +105,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
               <p className="text-gray-600 dark:text-gray-400">{user.email}</p>
             </div>
           </div>
+          <button
+            onClick={async () => {
+              await fetch(`${SERVER_URL}/api/v1/users/signout`, {
+                method: 'POST',
+                credentials: 'include'
+              })
+              window.location.reload()
+            }}
+            className="mt-4 px-4 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-700 rounded transition-colors border border-red-200 w-fit self-end"
+          >
+            Sign Out
+          </button>
         </div>
       </div>
     </div>

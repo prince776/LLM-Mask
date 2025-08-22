@@ -25,6 +25,7 @@ func DefaultKMS() *AzureKMS {
 func Init(ctx context.Context) {
 	defaultKMS = common.Must(NewKMS(common.PlatformCredsConfig().KeyVaultCreds))
 	InitRSA(ctx)
+	InitPlatformDEKs(ctx)
 }
 
 func NewKMS(kmsCreds *common.KeyVaultCredsConfig) (*AzureKMS, error) {

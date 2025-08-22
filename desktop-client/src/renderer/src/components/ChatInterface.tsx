@@ -194,8 +194,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {/* Input */}
       <ChatInput
         onSendMessage={handleSendMessage}
-        disabled={!chat}
+        disabled={!chat || !user}
         isLoading={loadingState.isLoading}
+        disabledText={!user ? 'You need to sign in to use anonymous chat' : undefined}
       />
     </div>
   )
