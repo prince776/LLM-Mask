@@ -7,6 +7,7 @@ import type { GenerateTokenReq, GenerateTokenResp, LLMProxyReq, LLMProxyResp } f
 import log from 'electron-log/main'
 import { GenerateToken } from './rsa'
 import { LLMProxy } from './llmproxy'
+import { doTorProxiedRequest, startTorProxy, stopTorProxy, waitForTor } from './torproxy'
 // Initialize the logger to be available in renderer process
 log.initialize()
 
@@ -60,6 +61,9 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
+  startTorProxy()
+  doTorProxiedRequest()
+
   ipcMain.handle(
     'generate-token',
     async (_event, requestData: GenerateTokenReq): Promise<GenerateTokenResp> => {
@@ -103,4 +107,8 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('before-quit', () => {
+  stopTorProxy()
 })

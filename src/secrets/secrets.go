@@ -16,7 +16,6 @@ const (
 	userCredsDEKID = "user-creds-dek"
 )
 
-// TODO: Get From KMS.
 var userCredsDEKStr string
 
 func InitPlatformDEKs(ctx context.Context) {
