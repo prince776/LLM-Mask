@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session, net } from 'electron'
+import { app, session, net } from 'electron'
 import { spawn, ChildProcess } from 'child_process'
 import * as path from 'path'
 import * as fs from 'fs'
@@ -64,54 +64,91 @@ export function stopTorProxy(): void {
   }
 }
 
-export function doTorProxiedRequest(): void {
+export function doTorProxiedRequest(input: string, init?: RequestInit): Promise<Response> {
   if (!torProcess) {
     log.error('Tor process is not running. Cannot make proxied request.')
-    return
+    return Promise.reject(new Error('Tor process is not running.'))
   }
-  waitForTor(torProcess).then(() => doTorProxiedRequestInternal())
+  return doTorProxiedRequestInternal(input, init)
 }
 
-function doTorProxiedRequestInternal(): void {
+function doTorProxiedRequestInternal(input: string, init?: RequestInit): Promise<Response> {
   const torSession = session.fromPartition(torSessionPartition)
-  if (!torSession) {
-    log.error('Failed to get torSession.')
-    return
-  }
-  torSession
-    .setProxy({
-      proxyRules: `socks5://127.0.0.1:${TOR_SOCKS_PORT}`
-    })
-    .then(() => {
-      log.info('Proxy set for torSession.')
 
-      const request = net.request({
-        method: 'GET',
-        url: 'https://check.torproject.org/api/ip',
-        partition: torSessionPartition
+  return new Promise((resolve, reject) => {
+    if (!torSession) {
+      return reject(new Error('Failed to get torSession.'))
+    }
+
+    torSession
+      .setProxy({
+        proxyRules: `socks5://127.0.0.1:${TOR_SOCKS_PORT}`
       })
+      .then(() => {
+        // Prepare the request options for net.request
+        const requestOptions = {
+          method: init?.method || 'GET',
+          url: input,
+          partition: torSessionPartition
+        }
 
-      request.on('response', (response) => {
-        log.info(`STATUS: ${response.statusCode}`)
-        let data = ''
-        response.on('data', (chunk) => {
-          data += chunk.toString()
+        const request = net.request(requestOptions)
+
+        // Set headers from init.headers
+        if (init?.headers) {
+          for (const [key, value] of Object.entries(init.headers)) {
+            request.setHeader(key, value as string)
+          }
+        }
+
+        // Handle the response and resolve the promise
+        request.on('response', (response) => {
+          let data = ''
+          response.on('data', (chunk) => {
+            data += chunk.toString()
+          })
+          response.on('end', () => {
+            const headers = new Headers()
+            for (const key in response.headers) {
+              const value = response.headers[key]
+              // The value can be a string or an array of strings
+              if (Array.isArray(value)) {
+                value.forEach((v) => headers.append(key, v))
+              } else {
+                headers.append(key, value)
+              }
+            }
+            resolve({
+              ok: response.statusCode >= 200 && response.statusCode < 300,
+              status: response.statusCode,
+              headers: headers,
+              json: () => Promise.resolve(JSON.parse(data)),
+              text: () => Promise.resolve(data)
+            } as unknown as Response)
+          })
         })
-        response.on('end', () => {
-          log.info('API call successful!')
-          log.info('Response:', JSON.parse(data))
+
+        request.on('error', (error) => {
+          reject(error)
         })
-      })
 
-      request.on('error', (error) => {
-        log.error('Request failed:', error)
-      })
+        // Convert the request body to a string or Buffer and write it
+        if (init?.body) {
+          try {
+            const body = init.body as string //
+            request.setHeader('Content-Type', 'application/json')
+            request.write(body)
+          } catch (error) {
+            reject(new Error('Failed to stringify request body.' + error))
+          }
+        }
 
-      request.end()
-    })
-    .catch((err) => {
-      log.error('Failed to set proxy:', err)
-    })
+        request.end()
+      })
+      .catch((err) => {
+        reject(err)
+      })
+  })
 }
 
 /**
@@ -125,9 +162,9 @@ function getTorPath(): string | null {
   if (process.platform === 'win32') {
     torPath = path.join(basePath, 'tor-binaries', 'tor.exe')
   } else if (process.platform === 'darwin') {
-    torPath = path.join(basePath, 'resources', 'mac-arm', 'tor', 'tor')
+    torPath = path.join(basePath, 'prod-deps', 'mac-arm', 'tor', 'tor')
   } else if (process.platform === 'linux') {
-    torPath = path.join(basePath, 'resources', 'mac-arm', 'tor', 'tor')
+    torPath = path.join(basePath, 'prod-deps', 'mac-arm', 'tor', 'tor')
   } else {
     log.error('Unsupported platform:', process.platform)
     return null
@@ -161,12 +198,7 @@ function selfSignBinary(binaryPath: string): void {
   }
 }
 
-/**
- * Waits for the Tor proxy to be fully bootstrapped.
- * @param torProcess The child process instance of Tor.
- * @returns A Promise that resolves when Tor is ready or rejects on failure.
- */
-export function waitForTor(torProcess: ChildProcess): Promise<void> {
+export function waitForTor(): Promise<void> {
   return new Promise((resolve, reject) => {
     // If torProcess is null or invalid, reject immediately.
     if (!torProcess || torProcess.killed) {
@@ -175,7 +207,7 @@ export function waitForTor(torProcess: ChildProcess): Promise<void> {
 
     // Set a timeout to prevent an indefinite wait.
     const timeout = setTimeout(() => {
-      torProcess.kill()
+      torProcess?.kill()
       reject(new Error('Tor bootstrap timed out after 30 seconds.'))
     }, 30000) // 30-second timeout.
 

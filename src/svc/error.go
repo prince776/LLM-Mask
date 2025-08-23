@@ -2,6 +2,7 @@ package svc
 
 import (
 	"context"
+	"github.com/cockroachdb/errors"
 	"llmmask/src/log"
 	"net/http"
 
@@ -43,7 +44,7 @@ func ErrInvalidRequest(err error) render.Renderer {
 }
 
 func ErrInternal(err error) render.Renderer {
-	log.Errorf(context.Background(), "Err Internal: %v", err)
+	log.Errorf(context.Background(), "Err Internal: %v", errors.Wrapf(err, "error"))
 	return &ErrResponse{
 		Err:            err,
 		HTTPStatusCode: 500,

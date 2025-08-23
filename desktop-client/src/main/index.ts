@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
+import icon from '../../prod-deps/icon.png?asset'
 import type { GenerateTokenReq, GenerateTokenResp, LLMProxyReq, LLMProxyResp } from '../types/ipc'
 
 import log from 'electron-log/main'
@@ -62,7 +62,13 @@ app.whenReady().then(() => {
   ipcMain.on('ping', () => console.log('pong'))
 
   startTorProxy()
-  doTorProxiedRequest()
+  waitForTor().then(() => {
+    doTorProxiedRequest('https://check.torproject.org/api/ip').then((result) => {
+      result.json().then((result) => {
+        log.info('Tor proxy health check:', result)
+      })
+    })
+  })
 
   ipcMain.handle(
     'generate-token',

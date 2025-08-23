@@ -55,8 +55,6 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 		return nil, err
 	}
 
-	log.Infof(ctx, "body: %s", string(bodyBytes))
-
 	extraBody_ := bodyMap["extra_body"]
 	extraBody := extraBody_.(map[string]any)
 	llmmaskData := extraBody["llmmask"]
