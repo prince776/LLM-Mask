@@ -81,6 +81,7 @@ func (s *Service) Run() {
 	r.Use(cors.Handler(corsOptions))
 
 	r.Get("/health", s.health)
+	r.Get("/", s.health)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		// These apis will not be needed for relay servers. Really only needed for the api-server users interact
