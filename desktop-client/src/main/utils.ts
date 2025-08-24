@@ -5,7 +5,6 @@ import { SERVER_URL } from '../types/config'
 // code. You can also put them in separate files and require them here.
 export async function getCookieHeader() {
   const defaultSession = session.defaultSession
-  defaultSession.fetch()
   const cookies = await defaultSession.cookies.get({ url: SERVER_URL })
   const cookieString = cookies.map((c) => `${c.name}=${c.value}`).join('; ')
   return {

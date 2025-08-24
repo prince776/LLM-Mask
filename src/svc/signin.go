@@ -145,6 +145,7 @@ func (s *Service) signInUser(ctx context.Context, oauthConf *oauth2.Config, toke
 		Path:     "/",
 		Secure:   true,
 		HttpOnly: true,
+		SameSite: http.SameSiteNoneMode,
 	}
 	http.SetCookie(w, &cookie)
 

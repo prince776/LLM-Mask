@@ -15,7 +15,7 @@ const (
 
 func APIServerBaseURL() string {
 	if IsProd() {
-		panic("unimplemented")
+		return "https://llmmaskserver.azurewebsites.net"
 	} else {
 		return "http://localhost:8080"
 	}
@@ -35,7 +35,12 @@ func PlatformCredsConfigFile() string {
 }
 
 func PlatformCredsConfig() *CredsConfig {
-	data := Must(os.ReadFile(PlatformCredsConfigFile()))
+	var data []byte
+	if !IsProd() {
+		data = Must(os.ReadFile(PlatformCredsConfigFile()))
+	} else {
+		data = []byte(os.Getenv("PROD_CREDENTIALS_CONFIG"))
+	}
 	res := &CredsConfig{}
 	Must2(json.Unmarshal(data, res))
 	return res
@@ -47,6 +52,7 @@ type CredsConfig struct {
 	KeyVaultCreds          *KeyVaultCredsConfig    `json:"key_vault_creds"`
 	ModelToKeyNames        map[string]string       `json:"model_to_key_names"`
 	ContentModeratorConfig *ContentModeratorConfig `json:"content_moderator_config"`
+	UserOAuthCreds         *UserOAuthCreds         `json:"user_oauth_creds"`
 }
 
 type KeyVaultCredsConfig struct {
@@ -67,19 +73,20 @@ type ContentModeratorConfig struct {
 	APIKey   string `json:"api_key"`
 }
 
+type UserOAuthCreds struct {
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+}
+
 var userOauthConf *oauth2.Config
 var userOauthConfOnce sync.Once
 
 func UserOAuthConf() *oauth2.Config {
 	userOauthConfOnce.Do(func() {
-		fileName := "resources/dev/user-oauth-conf.json"
-		if IsProd() {
-			fileName = "resources/prod/user-oauth-conf.json"
-		}
-		file := Must(os.ReadFile(fileName))
-
+		oauthCreds := PlatformCredsConfig().UserOAuthCreds
 		res := &oauth2.Config{}
-		Must2(json.Unmarshal(file, &res))
+		res.ClientID = oauthCreds.ClientID
+		res.ClientSecret = oauthCreds.ClientSecret
 		res.Endpoint = google.Endpoint
 		res.RedirectURL = fmt.Sprintf("%s/api/v1/users/grantGCP/callback", APIServerBaseURL())
 		res.Scopes = []string{

@@ -1,5 +1,5 @@
 // Shared config for Electron main and renderer
-export const SERVER_URL = 'http://localhost:8080' // Update as needed
+export const SERVER_URL = 'https://llmmaskserver.azurewebsites.net' // Update as needed
 
 const gemini25FlashPublicKey = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuV3ok7/IehRqGQLMzWGc
