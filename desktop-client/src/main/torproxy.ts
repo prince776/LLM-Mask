@@ -157,14 +157,36 @@ function doTorProxiedRequestInternal(input: string, init?: RequestInit): Promise
  */
 function getTorPath(): string | null {
   let torPath: string
-  const basePath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '..', '..') // Adjust this path to point to your project's root
+  let basePath = app.isPackaged ? process.resourcesPath : path.join(__dirname, '..', '..') // Adjust this path to point to your project's root
+  basePath = path.join(basePath, 'prod-deps', 'tor-dist')
 
   if (process.platform === 'win32') {
-    torPath = path.join(basePath, 'tor-binaries', 'tor.exe')
+    if (process.arch === 'x64') {
+      torPath = path.join(basePath, 'windows-x64', 'tor', 'tor.exe')
+    } else if (process.arch === 'ia32') {
+      torPath = path.join(basePath, 'windows-i686', 'tor', 'tor.exe')
+    } else {
+      log.error('Unsupported architecture on Windows:', process.arch)
+      return null
+    }
   } else if (process.platform === 'darwin') {
-    torPath = path.join(basePath, 'prod-deps', 'mac-arm', 'tor', 'tor')
+    if (process.arch === 'arm64') {
+      torPath = path.join(basePath, 'mac-arm', 'tor', 'tor')
+    } else if (process.arch === 'x64') {
+      torPath = path.join(basePath, 'mac-x86', 'tor', 'tor')
+    } else {
+      log.error('Unsupported architecture on macOS:', process.arch)
+      return null
+    }
   } else if (process.platform === 'linux') {
-    torPath = path.join(basePath, 'prod-deps', 'mac-arm', 'tor', 'tor')
+    if (process.arch === 'x64') {
+      torPath = path.join(basePath, 'linux-x86', 'tor', 'tor.exe')
+    } else if (process.arch === 'ia32') {
+      torPath = path.join(basePath, 'linux-i686', 'tor', 'tor.exe')
+    } else {
+      log.error('Unsupported architecture on Windows:', process.arch)
+      return null
+    }
   } else {
     log.error('Unsupported platform:', process.platform)
     return null

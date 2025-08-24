@@ -5,14 +5,7 @@ const sampleChat = (): Chat => {
   return {
     id: '1',
     title: 'Welcome Chat',
-    messages: [
-      {
-        id: '1',
-        content: 'Hello! How can I help you today?',
-        role: 'assistant',
-        timestamp: new Date()
-      }
-    ],
+    messages: [],
     createdAt: new Date(),
     updatedAt: new Date()
   }
