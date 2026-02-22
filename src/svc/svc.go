@@ -30,32 +30,36 @@ const (
 var (
 	frontendURLs = []string{
 		"http://localhost:5173",
+		"http://localhost:5174",
 		"http://localhost:3000",
 	}
 )
 
 type Service struct {
-	port         int
-	inMemCache   cache.Cache
-	authManagers map[confs.ModelName]*auth.AuthManager
-	llmProxy     *llm_proxy.LLMProxy
-	dbHandler    *models.DBHandler
+	port             int
+	inMemCache       cache.Cache
+	authManagers     map[confs.ModelName]*auth.AuthManager
+	abuseAuthManager *auth.AbuseAuthManager
+	llmProxy         *llm_proxy.LLMProxy
+	dbHandler        *models.DBHandler
 }
 
 func NewService(
 	port int,
 	authManagers map[confs.ModelName]*auth.AuthManager,
+	abuseAuthManager *auth.AbuseAuthManager,
 	apiKeyManager *llm_proxy.APIKeyManager,
 	dbHandler *models.DBHandler,
 	contentModerator *llm_proxy.ContentModerator,
 	kms *secrets.AzureKMS,
 ) *Service {
 	return &Service{
-		port:         port,
-		inMemCache:   *cache.New(10*time.Minute, 20*time.Minute),
-		authManagers: authManagers,
-		llmProxy:     llm_proxy.NewLLMProxy(authManagers, apiKeyManager, dbHandler, contentModerator, kms),
-		dbHandler:    dbHandler,
+		port:             port,
+		inMemCache:       *cache.New(10*time.Minute, 20*time.Minute),
+		authManagers:     authManagers,
+		abuseAuthManager: abuseAuthManager,
+		llmProxy:         llm_proxy.NewLLMProxy(authManagers, abuseAuthManager, apiKeyManager, dbHandler, contentModerator, kms),
+		dbHandler:        dbHandler,
 	}
 }
 
@@ -84,6 +88,8 @@ func (s *Service) Run() {
 
 	r.Get("/health", s.health)
 	r.Get("/", s.health)
+	r.Get("/admin", s.AdminDashboardHandler)
+	r.Get("/admin/notifications", s.AdminDashboardHandler)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		// These apis will not be needed for relay servers. Really only needed for the api-server users interact
@@ -101,10 +107,20 @@ func (s *Service) Run() {
 			r.Use(s.AuthMiddleware)
 			r.Get("/me", s.GetCurrentUser)
 			r.Post("/auth-token/{modelName}", s.GetSignedBlindedTokenHandler)
+			r.Post("/abuse-token/permanent", s.IssuePermanentAbuseTokenHandler)
+			r.Post("/abuse-token/transient", s.IssueTransientAbuseTokenHandler)
+			r.Put("/abuse-token/backup", s.StoreAbuseTokenBackupHandler)
+			r.Get("/abuse-token/backup", s.GetAbuseTokenBackupHandler)
+			r.Get("/notifications", s.GetNotificationsHandler)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(s.adminKeyMiddleware)
+			r.Post("/admin/notification", s.AdminSetNotificationHandler)
+			r.Delete("/admin/notification", s.AdminDeleteNotificationHandler)
 		})
 		r.Post("/llm-proxy", s.LLMProxyHandler)
 		r.Get("/model-pricing", s.GetModelPricingHandler)
-		r.Post("/paddle/webhook", s.PaddleWebHookHandler)
+		r.Post("/dodo/webhook", s.DodoWebHookHandler)
 		r.Get("/purchase", s.PurchaseHandler)
 	})
 

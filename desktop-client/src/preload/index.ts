@@ -1,6 +1,18 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { GenerateTokenReq, GenerateTokenResp, LLMProxyReq, LLMProxyResp } from '../types/ipc'
+import type {
+  GenerateTokenReq,
+  GenerateTokenResp,
+  LLMProxyReq,
+  LLMProxyResp,
+  SetupAbuseTokensReq,
+  SetupAbuseTokensResp,
+  RefreshTransientAbuseTokenReq,
+  RefreshTransientAbuseTokenResp,
+  RestoreAbuseTokenBackupReq,
+  RestoreAbuseTokenBackupResp,
+  GetAbuseTokenStatusResp
+} from '../types/ipc'
 
 // Custom APIs for renderer
 const api = {
@@ -16,7 +28,7 @@ const api = {
   },
   startPurchase: async (payload: {
     transientToken: string
-    paddlePriceID: string
+    dodoProductID: string
     userID: string
   }): Promise<void> => {
     return await ipcRenderer.invoke('start-purchase', payload)
@@ -32,6 +44,22 @@ const api = {
   },
   onAuthWindowClosed: (callback: () => void) => {
     ipcRenderer.on('auth-window-closed', callback)
+  },
+  setupAbuseTokens: async (req: SetupAbuseTokensReq): Promise<SetupAbuseTokensResp> => {
+    return await ipcRenderer.invoke('setup-abuse-tokens', req)
+  },
+  refreshTransientAbuseToken: async (
+    req: RefreshTransientAbuseTokenReq
+  ): Promise<RefreshTransientAbuseTokenResp> => {
+    return await ipcRenderer.invoke('refresh-transient-abuse-token', req)
+  },
+  restoreAbuseTokenBackup: async (
+    req: RestoreAbuseTokenBackupReq
+  ): Promise<RestoreAbuseTokenBackupResp> => {
+    return await ipcRenderer.invoke('restore-abuse-token-backup', req)
+  },
+  getAbuseTokenStatus: async (): Promise<GetAbuseTokenStatusResp> => {
+    return await ipcRenderer.invoke('get-abuse-token-status')
   }
 }
 

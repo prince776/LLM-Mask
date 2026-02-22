@@ -35,6 +35,10 @@ func main() {
 	for _, modelName := range confs.AllModels() {
 		authManagers[modelName] = auth.NewAuthManager(secrets.GetRSAKeysForModel(modelName))
 	}
+	abuseAuthMgr := auth.NewAbuseAuthManager(
+		secrets.GetAbuseRSAKeys(confs.AbuseKeyPermanent),
+		secrets.GetAbuseRSAKeys(confs.AbuseKeyTransient),
+	)
 
 	dbHandler := models.DefaultDBHandler()
 
@@ -42,7 +46,7 @@ func main() {
 	contentModerator := llm_proxy.NewContentModerator(contentModeratorConf.Endpoint, contentModeratorConf.APIKey, dbHandler)
 
 	kms := secrets.DefaultKMS()
-	server := svc.NewService(8080, authManagers, apiKeyManager, dbHandler, contentModerator, kms)
+	server := svc.NewService(8080, authManagers, abuseAuthMgr, apiKeyManager, dbHandler, contentModerator, kms)
 	server.Run()
 	os.Exit(0)
 }

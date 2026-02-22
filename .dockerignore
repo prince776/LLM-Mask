@@ -1,0 +1,15 @@
+.git
+.github
+.idea
+.vscode
+
+bin
+tmp
+.cache
+
+desktop-client/node_modules
+desktop-client/dist
+desktop-client/release-artifacts
+
+.DS_Store
+*.log

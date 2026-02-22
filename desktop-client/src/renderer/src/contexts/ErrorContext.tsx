@@ -1,79 +1,78 @@
-import  { createContext, useContext, useState, ReactNode, useCallback } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react'
+import { AlertTriangle, X } from 'lucide-react'
 
 interface ErrorContextType {
-  showError: (message: string, consoleMsg?: any) => void;
+  showError: (message: string, consoleMsg?: any) => void
 }
 
-const ErrorContext = createContext<ErrorContextType | undefined>(undefined);
+const ErrorContext = createContext<ErrorContextType | undefined>(undefined)
 
 export const useError = () => {
-  const context = useContext(ErrorContext);
-  if (!context) throw new Error("useError must be used within an ErrorProvider");
-  return context;
-};
+  const context = useContext(ErrorContext)
+  if (!context) throw new Error('useError must be used within an ErrorProvider')
+  return context
+}
 
 export const ErrorProvider = ({ children }: { children: ReactNode }) => {
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null)
+  const timerRef = useRef<number | null>(null)
 
   const showError = useCallback((message: string, consoleMsg?: any) => {
-    setError(message);
-    console.log(message, "extra:" , consoleMsg);
-    setTimeout(() => setError(null), 4000);
-  }, []);
+    setError(message)
+    console.error(message, 'extra:', consoleMsg)
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current)
+    }
+    timerRef.current = window.setTimeout(() => {
+      setError(null)
+      timerRef.current = null
+    }, 4000)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        window.clearTimeout(timerRef.current)
+      }
+    }
+  }, [])
+
+  const dismiss = () => {
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+    setError(null)
+  }
 
   return (
     <ErrorContext.Provider value={{ showError }}>
       {children}
-      {error && <ErrorCard message={error} />}
+      {error && <ErrorCard message={error} onDismiss={dismiss} />}
     </ErrorContext.Provider>
-  );
-};
+  )
+}
 
-const ErrorCard = ({ message }: { message: string }) => {
-  const [visible, setVisible] = useState(true);
-  const [hover, setHover] = useState(false);
-  if (!visible) return null;
+const ErrorCard = ({ message, onDismiss }: { message: string; onDismiss: () => void }) => {
   return (
     <div
-      style={{
-        position: "fixed",
-        bottom: 24,
-        right: 24,
-        background: "#f87171",
-        color: "white",
-        padding: "16px 24px",
-        borderRadius: 8,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-        zIndex: 9999,
-        minWidth: 280,
-        fontWeight: 500,
-        fontSize: 16,
-        transition: "opacity 0.3s",
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-      }}
+      className="fixed bottom-6 right-6 z-[9999] w-[min(30rem,calc(100vw-3rem))] rounded-xl border border-red-200 bg-red-50/95 p-3 shadow-lg backdrop-blur dark:border-red-500/30 dark:bg-red-500/10"
+      role="alert"
+      aria-live="assertive"
     >
-      <span style={{ flex: 1 }}>{message}</span>
-      <button
-        onClick={() => setVisible(false)}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-        style={{
-          background: hover ? "rgba(255,255,255,0.15)" : "transparent",
-          border: "none",
-          color: hover ? "#fee2e2" : "white",
-          fontSize: 20,
-          cursor: "pointer",
-          marginLeft: 8,
-          borderRadius: 4,
-          padding: "2px 8px",
-          transition: "background 0.2s, color 0.2s"
-        }}
-        aria-label="Close error dialog"
-      >
-        ×
-      </button>
+      <div className="flex items-start gap-2">
+        <div className="mt-0.5 rounded-md bg-red-100 p-1 text-red-700 dark:bg-red-500/20 dark:text-red-300">
+          <AlertTriangle size={14} />
+        </div>
+        <p className="flex-1 text-sm font-medium text-red-800 dark:text-red-200">{message}</p>
+        <button
+          onClick={onDismiss}
+          className="rounded-md p-1 text-red-700 transition-colors hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-500/20"
+          aria-label="Close error dialog"
+        >
+          <X size={14} />
+        </button>
+      </div>
     </div>
-  );
-};
+  )
+}

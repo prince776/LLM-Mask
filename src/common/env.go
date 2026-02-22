@@ -6,16 +6,22 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"os"
+	"strings"
 	"sync"
 )
 
 const (
-	DepEnvKey = "DEPLOYMENT"
+	DepEnvKey        = "DEPLOYMENT"
+	APIBaseURLEnvKey = "API_BASE_URL"
 )
 
 func APIServerBaseURL() string {
+	if baseURL := strings.TrimSpace(os.Getenv(APIBaseURLEnvKey)); baseURL != "" {
+		return strings.TrimRight(baseURL, "/")
+	}
+
 	if IsProd() {
-		return "https://llmmaskserver.azurewebsites.net"
+		return "https://api.llmtor.com"
 	} else {
 		return "http://localhost:8080"
 	}
@@ -54,15 +60,15 @@ type CredsConfig struct {
 	ModelToKeyNames        map[string]string       `json:"model_to_key_names"`
 	ContentModeratorConfig *ContentModeratorConfig `json:"content_moderator_config"`
 	UserOAuthCreds         *UserOAuthCreds         `json:"user_oauth_creds"`
-	PaddleCreds            *PaddleCreds            `json:"paddle_creds"`
+	DodoPaymentsCreds      *DodoPaymentsCreds      `json:"dodo_payments_creds"`
 	ModelPackages          []ModelTokenPackage     `json:"model_packages"`
+	AdminAPIKey            string                  `json:"admin_api_key"`
 }
 
-type PaddleCreds struct {
-	SecretKey   string `json:"secret_key"`
+type DodoPaymentsCreds struct {
 	APIKey      string `json:"api_key"`
-	ClientToken string `json:"client_token"`
-	Environment string `json:"environment"`
+	WebhookKey  string `json:"webhook_key"`
+	Environment string `json:"environment"` // "test_mode" or "live_mode"
 }
 
 type KeyVaultCredsConfig struct {
@@ -94,7 +100,7 @@ type ModelTokenPackage struct {
 	Tokens        int    `json:"Tokens"`
 	Price         string `json:"Price"`
 	Popular       bool   `json:"Popular"`
-	PaddlePriceID string `json:"PaddlePriceID,omitempty"`
+	DodoProductID string `json:"DodoProductID,omitempty"`
 }
 
 var userOauthConf *oauth2.Config

@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Menu } from 'lucide-react'
+import { Menu, Shield } from 'lucide-react'
 import { ChatMessage } from './ChatMessage'
 import { ChatInput } from './ChatInput'
 import { ModelSelector } from './ModelSelector'
+import { AbuseTokenSetupModal } from './AbuseTokenSetupModal'
+import { TransientTokenExpiredModal } from './TransientTokenExpiredModal'
 import { Chat, Message } from '../types'
 import { useError } from '@renderer/contexts/ErrorContext'
 import { LLMProxyReq, LLMProxyResp } from '../../../types/ipc'
@@ -23,7 +25,6 @@ interface LoadingState {
   message: string
 }
 
-// Local type mirroring ChatInput's image attachment (only fields we need)
 interface ImageAttachment {
   dataUrl: string
   name: string
@@ -31,9 +32,7 @@ interface ImageAttachment {
   size: number
 }
 
-// Extract image data URLs from markdown and return content parts for OpenAI
 function toOpenAIContentFromMarkdown(md: string): Array<any> | string {
-  // Match markdown images: ![alt](url)
   const regex = /!\[[^\]]*\]\(([^\)]+)\)/g
   const imageUrls: string[] = []
   let match
@@ -41,7 +40,6 @@ function toOpenAIContentFromMarkdown(md: string): Array<any> | string {
     const url = match[1]
     if (url.startsWith('data:image/')) imageUrls.push(url)
   }
-  // Remove image tags from text for the text part
   const textOnly = md.replace(regex, '').trim()
 
   if (imageUrls.length === 0) {
@@ -73,6 +71,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editedTitle, setEditedTitle] = useState(chat?.title || '')
 
+  // Abuse token modal state
+  const [showAbuseSetup, setShowAbuseSetup] = useState(false)
+  const [showTransientExpired, setShowTransientExpired] = useState(false)
+  // Pending message to send after token setup
+  const pendingMessageRef = useRef<Parameters<typeof handleSendMessage>[0] | null>(null)
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -85,18 +89,65 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setEditedTitle(chat?.title || '')
   }, [chat?.title])
 
+  const resumePending = async () => {
+    if (pendingMessageRef.current) {
+      const msg = pendingMessageRef.current
+      pendingMessageRef.current = null
+      await handleSendMessage(msg)
+    }
+  }
+
+  const handleAbuseSetup = async (password: string, uploadToServer: boolean) => {
+    const resp = await window.api.setupAbuseTokens({ password, uploadToServer })
+    if (resp.error) throw new Error(resp.error)
+    setShowAbuseSetup(false)
+    await resumePending()
+  }
+
+  const handleAbuseRestoreFromFile = async (password: string) => {
+    const resp = await window.api.restoreAbuseTokenBackup({ password, source: 'file' })
+    if (resp.error) throw new Error(resp.error)
+    setShowAbuseSetup(false)
+    await resumePending()
+  }
+
+  const handleAbuseRestoreFromServer = async (password: string) => {
+    const resp = await window.api.restoreAbuseTokenBackup({ password, source: 'server' })
+    if (resp.error) throw new Error(resp.error)
+    setShowAbuseSetup(false)
+    await resumePending()
+  }
+
+  const handleTransientRefresh = async (password: string, uploadToServer: boolean) => {
+    const resp = await window.api.refreshTransientAbuseToken({ password, uploadToServer })
+    if (resp.error) throw new Error(resp.error)
+    setShowTransientExpired(false)
+    await resumePending()
+  }
+
   const handleSendMessage = async (payload: {
     text: string
     images?: ImageAttachment[]
     displayText?: string
   }) => {
     try {
-      // 1. Add the user's message to UI (embed images as markdown so ChatMessage shows them)
+      // Check abuse token status before proceeding
+      const abuseStatus = await window.api.getAbuseTokenStatus()
+      if (!abuseStatus.hasTokens) {
+        pendingMessageRef.current = payload
+        setShowAbuseSetup(true)
+        return
+      }
+      if (abuseStatus.transientExpired) {
+        pendingMessageRef.current = payload
+        setShowTransientExpired(true)
+        return
+      }
+
       const displayText = payload.displayText ?? payload.text
       onSendMessage(displayText, 'user')
 
-      // 2. Get auth token.
-      setLoadingState({ isLoading: true, message: 'Generating Anonymous Token...' })
+      setLoadingState({ isLoading: true, message: 'Generating anonymous token...' })
       const blindedToken = await window.api.generateToken({
         modelName: selectedModel
       })
@@ -104,28 +155,22 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         throw blindedToken.error
       }
 
-      // Decrement token for every request (whether it's a new token or from the pool)
       decrementToken(selectedModel)
 
-      // 3. Get LLM response.
-      setLoadingState({ isLoading: true, message: 'Getting LLM Response Anonymously...' })
+      setLoadingState({ isLoading: true, message: 'Routing through Tor...' })
 
-      // Build messages for LLM, converting markdown image tags into image_url content items
       const historyMessages = [
         ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
         ...((chat?.messages ?? []) as Message[])
       ]
 
-      // Convert history messages
       const mappedHistory = historyMessages.map((m: any) => {
-        // m may be system prompt object or Message
         const role = m.role
         const content =
           typeof m.content === 'string' ? toOpenAIContentFromMarkdown(m.content) : m.content
         return { role, content }
       })
 
-      // Current user message with potential inline images
       const currentUserContentParts: any[] = []
       if (payload.text && payload.text.trim()) {
         currentUserContentParts.push({ type: 'text', text: payload.text.trim() })
@@ -152,6 +197,19 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       }
 
       const llmResp: LLMProxyResp = await window.api.llmProxy(llmsProxyReq)
+      if (llmResp.abuseTokenExpired) {
+        pendingMessageRef.current = payload
+        setShowTransientExpired(true)
+        return
+      }
+      if (llmResp.abuseTokenInvalid || llmResp.abuseTokenBlacklisted) {
+        showError(
+          llmResp.abuseTokenBlacklisted
+            ? 'Your anonymous access has been suspended. Please contact support.'
+            : 'Anonymous access token invalid. Please contact support.'
+        )
+        return
+      }
       if (llmResp.blocked) {
         showError(`Request Blocked: ${llmResp.blockReason ?? 'Unknown reason'}`)
         return
@@ -168,7 +226,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         throw llmResp.error
       }
 
-      // 4. Process response and update chat.
       const aiMsg = llmResp.data.choices[0].message.content as unknown as string
       onSendMessage(aiMsg, 'assistant')
     } catch (e) {
@@ -179,21 +236,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }
 
-  // Add regenerate response handler
   const handleRegenerateResponse = async () => {
     if (!chat || chat.messages.length === 0) return
-    // Find the last user message
     const lastUserMsgIdx = [...chat.messages].map((m) => m.role).lastIndexOf('user')
     if (lastUserMsgIdx === -1) return
-    // Store the last user message before updating chat.messages
     const lastUserMsg = chat.messages[lastUserMsgIdx]
-    // Remove the last assistant message (the response) along with the last user message
     const newMessages = chat.messages.slice(0, lastUserMsgIdx)
     if (chat) {
       chat.messages = newMessages
     }
 
-    // Parse images from markdown in last user message
     const regex = /!\[[^\]]*\]\(([^\)]+)\)/g
     const images: ImageAttachment[] = []
     let match
@@ -220,33 +272,43 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-900">
+    <div className="flex flex-col h-full bg-white dark:bg-[#161b27]">
+      {showAbuseSetup && (
+        <AbuseTokenSetupModal
+          onSetup={handleAbuseSetup}
+          onRestoreFromFile={handleAbuseRestoreFromFile}
+          onRestoreFromServer={handleAbuseRestoreFromServer}
+        />
+      )}
+      {showTransientExpired && (
+        <TransientTokenExpiredModal onRefresh={handleTransientRefresh} />
+      )}
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-white/[0.06] bg-white dark:bg-[#161b27]">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={onToggleSidebar}
-            className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="lg:hidden p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors"
           >
-            <Menu size={20} className="text-gray-600 dark:text-gray-400" />
+            <Menu size={18} className="text-gray-500 dark:text-gray-400" />
           </button>
-          <div>
+          <div className="min-w-0">
             {isEditingTitle ? (
               <div className="flex items-center gap-2">
                 <input
-                  className="text-lg font-semibold px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none"
+                  className="text-sm font-semibold px-2 py-1 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 border border-transparent focus:border-blue-500/30"
                   value={editedTitle}
                   onChange={(e) => setEditedTitle(e.target.value)}
                   autoFocus
                 />
                 <button
-                  className="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
                   onClick={handleTitleSave}
                 >
                   Save
                 </button>
                 <button
-                  className="px-2 py-1 text-xs rounded bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-600"
+                  className="px-2.5 py-1 text-xs rounded-lg bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors font-medium"
                   onClick={() => {
                     setIsEditingTitle(false)
                     setEditedTitle(chat?.title || '')
@@ -256,25 +318,25 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {chat?.title || 'Select a chat'}
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
+                  {chat?.title || 'New Conversation'}
                 </h1>
                 {chat && (
                   <button
-                    className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+                    className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-white/5 transition-colors opacity-0 group-hover:opacity-100"
                     onClick={() => setIsEditingTitle(true)}
                     title="Edit chat title"
                   >
                     <svg
-                      width="16"
-                      height="16"
+                      width="13"
+                      height="13"
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      className="text-gray-500 dark:text-gray-400"
+                      className="text-gray-400 dark:text-gray-500"
                     >
                       <path d="M12 2l2 2-8 8-2 2H2v-2l2-2 8-8z" />
                     </svg>
@@ -282,9 +344,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 )}
               </div>
             )}
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {chat?.messages.length || 0} messages
-            </p>
+            {chat && (
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
+                {chat.messages.length} {chat.messages.length === 1 ? 'message' : 'messages'}
+              </p>
+            )}
           </div>
         </div>
 
@@ -297,38 +361,18 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">
-        {chat?.messages.length === 0 ? (
+        {!chat || chat.messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                {/* Enlarged custom mask SVG for anonymity */}
-                <svg
-                  width="56"
-                  height="56"
-                  viewBox="0 0 56 56"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <ellipse cx="28" cy="28" rx="25" ry="16" fill="#2563eb" fillOpacity="0.15" />
-                  <path
-                    d="M13 28c0 7.5 6.5 14 15 14s15-6.5 15-14c0-3-1.5-6-4-8.5C36.5 15.5 32 15 28 15s-8.5.5-11 4.5C14.5 22 13 25 13 28z"
-                    fill="#2563eb"
-                  />
-                  <ellipse cx="21.5" cy="30.5" rx="2.2" ry="3" fill="#fff" />
-                  <ellipse cx="34.5" cy="30.5" rx="2.2" ry="3" fill="#fff" />
-                  <path
-                    d="M23 36c1.5.7 3 .7 5 .7s3.5 0 5-.7"
-                    stroke="#fff"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
-                </svg>
+            <div className="text-center max-w-xs px-6">
+              <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-blue-600/20">
+                <Shield size={24} className="text-white" />
               </div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Start A New Anonymous Conversation
+              <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-2">
+                Start an anonymous conversation
               </h2>
-              <p className="text-gray-500 dark:text-gray-400 max-w-md">
-                Not even LLMMask can see you. No tracking. No records. Cryptographically Secure.
+              <p className="text-sm text-gray-400 dark:text-gray-500 leading-relaxed">
+                Your messages are routed through Tor. No tracking. No logs. Cryptographically
+                private.
               </p>
             </div>
           </div>
@@ -355,26 +399,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               )
             })}
             {loadingState.isLoading && (
-              <div className="flex gap-4 p-6 bg-gray-50 dark:bg-gray-800/50">
-                <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
-                  <div className="w-4 h-4 bg-gray-400 rounded-full animate-pulse" />
+              <div className="flex gap-4 px-6 py-5">
+                <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0 shadow shadow-blue-600/20">
+                  <Shield size={13} className="text-white" />
                 </div>
-                <div className="flex-1 flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: '0.1s' }}
-                    />
-                    <div
-                      className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                      style={{ animationDelay: '0.2s' }}
-                    />
+                <div className="flex items-center gap-3 pt-0.5">
+                  <div className="flex gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                   {loadingState.message && (
-                    <div className="text-sm text-gray-700 dark:text-gray-200 font-medium">
+                    <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">
                       {loadingState.message}
-                    </div>
+                    </span>
                   )}
                 </div>
               </div>
@@ -389,7 +427,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         onSendMessage={handleSendMessage}
         disabled={!chat || !user}
         isLoading={loadingState.isLoading}
-        disabledText={!user ? 'You need to sign in to use anonymous chat' : undefined}
+        disabledText={!user ? 'Sign in to start chatting anonymously' : undefined}
       />
     </div>
   )

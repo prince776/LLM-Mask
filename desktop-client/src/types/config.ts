@@ -1,7 +1,11 @@
 // Shared config for Electron main and renderer
 import { MODEL_IDS } from './models'
 
-export const SERVER_URL = 'http://localhost:8080' // Update as needed
+const DEV_SERVER_URL =  'https://api.llmtor.com' // http://localhost:8080'
+const PROD_SERVER_URL = 'https://api.llmtor.com'
+const IS_PROD = process.env.NODE_ENV === 'production'
+
+export const SERVER_URL = process.env.API_BASE_URL || (IS_PROD ? PROD_SERVER_URL : DEV_SERVER_URL)
 
 const gemini25FlashPublicKey = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAltEfFcuqWqCzIWo1KoBw
@@ -104,4 +108,27 @@ export const RSAKeys = {
   [MODEL_IDS.CHAT_GPT_4_1]: gpt41PublicKey,
   [MODEL_IDS.CHAT_GPT_4o]: gpt4oPublicKey,
   [MODEL_IDS.CHAT_GPT_o1]: o1PublicKey
+}
+
+// Abuse token RSA public keys (fetched from server at deploy time, same pattern as model keys).
+// Replace these placeholder values with the actual keys generated during deployment.
+export const AbuseTokenPublicKeys = {
+  permanent: `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzT+l8mMFMSbw88q/FOHK
+brT4gzYImu6ZXztx1/OZ7yoADKg5xDBVWuxw3DLZGlmu7FnrHAu9b4EzC1shNdk6
+ru5WZF/IO/rkpJJw9g5FGzWFP95siF5XqC1oMDuhd7pSqc0lbUpWTY01/2cj2BSS
++f3tqrL4SuBXEzB6EiLuqAOaFy27vjhVwcrZmU+Mg2MxNYb+oQTMECoQ/t72Ju6Q
+0RtT2lc/9CVNJGEZeeNOhtT5KsJsW3skNqXiOrEKUuG9DVF2W1aMVQouUfW2JCsR
+t6XAmataaiLg7eTzXmYBh0ccargmXw12AiXZbxE9zXWAcxpw+0lvxDP/0sytPcqD
+dwIDAQAB
+-----END PUBLIC KEY-----`,
+  transient: `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA7Jqv9pCwg8uFrPg6Kht2
+n8ZCggNtmvFdlpa+15mEqgQt7ni+sh24GpZ03XpDbfNFGgCqgeD1Kbqe7FeoM6R6
+4Lo1xF4U9tMGiD3cq4SRgdIbym4HMjN8+w5nPTYYqbqAX1vVSxhMLgBClzdlUa6W
+Aph77EzySQWlzmbQjF4p2yNUNFWQDVi4xzbeMJwUf1dCHwySpY6GErCl2z/IPKN3
+crtL56SSmsZ+C1FhWvexSfn05NR8cvsPMxskziPGRmi00EheGLcGz0gu+3rvBSB/
+TnawGROkh2sBCHRMBwj4faf+dYM7BelfXLWvdfNqItuAus7E/xFYz4ViOIqSHGPz
+HwIDAQAB
+-----END PUBLIC KEY-----`
 }

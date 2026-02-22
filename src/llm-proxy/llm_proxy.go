@@ -26,15 +26,17 @@ const MaxRequestSizeBytes = 30000 // 30KB limit for LLM proxy requests
 type LLMProxy struct {
 	apiKeyManager    *APIKeyManager
 	authManagers     map[confs.ModelName]*auth.AuthManager
+	abuseAuthManager *auth.AbuseAuthManager
 	dbHandler        *models.DBHandler
 	contentModerator *ContentModerator
 	kms              *secrets.AzureKMS
 }
 
-func NewLLMProxy(authManagers map[confs.ModelName]*auth.AuthManager, apiKeyManager *APIKeyManager, dbHandler *models.DBHandler,
+func NewLLMProxy(authManagers map[confs.ModelName]*auth.AuthManager, abuseAuthManager *auth.AbuseAuthManager, apiKeyManager *APIKeyManager, dbHandler *models.DBHandler,
 	contentModerator *ContentModerator, kms *secrets.AzureKMS) *LLMProxy {
 	return &LLMProxy{
 		authManagers:     authManagers,
+		abuseAuthManager: abuseAuthManager,
 		apiKeyManager:    apiKeyManager,
 		dbHandler:        dbHandler,
 		contentModerator: contentModerator,
@@ -119,6 +121,42 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 	destURL, err := url.Parse(destURLStr)
 	if err != nil {
 		return nil, err
+	}
+
+	// Verify permanent abuse token
+	if err := l.abuseAuthManager.VerifyPermanentToken(req.PermanentAbuseToken, req.PermanentAbuseTokenSig); err != nil {
+		return &LLMProxyResponse{AbuseTokenInvalid: true}, nil
+	}
+	// Check permanent abuse token not blacklisted — fail closed on DB error
+	permBlacklist := &models.AbuseTokenBlacklist{
+		DocID: models.DocIDForAbuseToken(req.PermanentAbuseToken),
+	}
+	permFetchErr := l.dbHandler.Fetch(ctx, permBlacklist)
+	if permFetchErr == nil {
+		return &LLMProxyResponse{AbuseTokenBlacklisted: true}, nil
+	}
+	if !models.IsNotFoundErr(permFetchErr) {
+		return nil, errors.Wrapf(permFetchErr, "failed to check permanent abuse token blacklist")
+	}
+
+	// Verify transient abuse token
+	transientErr := l.abuseAuthManager.VerifyTransientToken(req.TransientAbuseToken, req.TransientAbuseTokenSig)
+	if transientErr != nil {
+		if errors.Is(transientErr, auth.ErrAbuseTokenExpired) {
+			return &LLMProxyResponse{AbuseTokenExpired: true}, nil
+		}
+		return &LLMProxyResponse{AbuseTokenInvalid: true}, nil
+	}
+	// Check transient abuse token not blacklisted — fail closed on DB error
+	transBlacklist := &models.AbuseTokenBlacklist{
+		DocID: models.DocIDForAbuseToken(req.TransientAbuseToken),
+	}
+	transFetchErr := l.dbHandler.Fetch(ctx, transBlacklist)
+	if transFetchErr == nil {
+		return &LLMProxyResponse{AbuseTokenBlacklisted: true}, nil
+	}
+	if !models.IsNotFoundErr(transFetchErr) {
+		return nil, errors.Wrapf(transFetchErr, "failed to check transient abuse token blacklist")
 	}
 
 	isTokenValid, err := authManager.VerifyUnBlindedToken(req.Token, req.SignedToken)
@@ -215,7 +253,7 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 		reqFwd := &http.Request{
 			Method: "POST",
 			URL:    destURL,
-			Header: r.Header,
+			Header: make(http.Header), // Never forward client headers; set only what the upstream needs.
 			Body:   io.NopCloser(bytes.NewReader(proxyReqBody)),
 		}
 		reqFwd = reqFwd.WithContext(ctx)

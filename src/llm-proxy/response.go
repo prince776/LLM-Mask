@@ -12,6 +12,10 @@ type LLMProxyResponse struct {
 	SizeLimitReason   string `json:"size_limit_reason"`
 	Metadata          []byte `json:"metadata"`
 	ProxyResponse     []byte `json:"proxy_response"`
+
+	AbuseTokenInvalid     bool `json:"abuse_token_invalid,omitempty"`
+	AbuseTokenExpired     bool `json:"abuse_token_expired,omitempty"`
+	AbuseTokenBlacklisted bool `json:"abuse_token_blacklisted,omitempty"`
 }
 
 func (b *LLMProxyResponse) Bytes() []byte {

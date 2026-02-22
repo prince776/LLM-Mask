@@ -2,6 +2,7 @@ package models
 
 import (
 	"llmmask/src/common"
+	"time"
 )
 
 const (
@@ -22,9 +23,9 @@ type User struct {
 
 	ProfileImage string // URL to user's profile image
 
-	// Paddle Info
-	PaddleCustomerID     string
-	PaddleSubscriptionID string
+	// Abuse token tracking
+	PermanentAbuseTokenIssuedAt *time.Time // nil = never issued
+	TransientAbuseTokenEpoch    uint32     // last issued epoch (0 = never)
 
 	// Transient Info, not really persisted
 	TransientToken string

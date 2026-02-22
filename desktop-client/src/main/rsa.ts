@@ -197,9 +197,11 @@ export async function prefetchTokens(
         })
         log.info('Prefetched token', i + 1, 'of', tokensToPrefetch, 'for model:', modelName)
 
-        // Add small delay between token generations to avoid overwhelming server
+        // Random jitter between token issuances to reduce timing-correlation attacks.
+        // Tokens are pooled so the user never waits for this delay.
         if (i < tokensToPrefetch - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 200))
+          const jitterMs = 5000 + Math.random() * 25000 // 5–30 seconds
+          await new Promise((resolve) => setTimeout(resolve, jitterMs))
         }
       } catch (err) {
         log.error('Failed to prefetch token', i + 1, 'for model:', modelName, ':', err)
