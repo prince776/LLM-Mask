@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { ArrowLeft, User, Mail, Zap } from 'lucide-react'
+import { ArrowLeft, Zap, Shield } from 'lucide-react'
 import { useUser } from '../contexts/UserContext'
 import { fetchPfpWithCache } from '../utils/pfpCache'
 import { availableModels } from '../data/models'
@@ -29,19 +29,28 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
     }
   }, [user?.picture])
 
+  const userInitial = user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '?'
+
   if (!user) {
-    // Not signed in: show sign in page
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700 shadow">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-            Sign In
-          </h2>
+      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gray-50 dark:bg-[#161b27]">
+        <div className="max-w-sm w-full">
+          <div className="text-center mb-8">
+            <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-600/20">
+              <Shield size={24} className="text-white" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+              Sign in to LLMTor
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Purchase and manage your anonymous chat credits
+            </p>
+          </div>
           <button
             onClick={signIn}
-            className="w-full flex items-center justify-center gap-2 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-lg"
+            className="w-full flex items-center justify-center gap-3 p-3 bg-white dark:bg-white/[0.05] hover:bg-gray-50 dark:hover:bg-white/[0.08] text-gray-800 dark:text-gray-100 rounded-xl transition-colors font-medium text-sm border border-gray-200 dark:border-white/[0.08] shadow-sm"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-6 h-6">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-5 h-5">
               <g>
                 <path
                   fill="#4285F4"
@@ -62,7 +71,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
                 <path fill="none" d="M0 0h48v48H0z" />
               </g>
             </svg>
-            Sign in with Google
+            Continue with Google
           </button>
         </div>
       </div>
@@ -70,77 +79,85 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-[#161b27]">
       <div className="max-w-2xl mx-auto p-6">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-3 mb-7">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-colors"
           >
-            <ArrowLeft size={20} className="text-gray-600 dark:text-gray-400" />
+            <ArrowLeft size={18} className="text-gray-500 dark:text-gray-400" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Profile</h1>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Profile</h1>
         </div>
 
-        {/* Avatar Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 mb-6 border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-6">
-            <div className="relative">
+        {/* Avatar + Info */}
+        <div className="bg-white dark:bg-white/[0.04] rounded-2xl p-6 mb-4 border border-gray-100 dark:border-white/[0.06]">
+          <div className="flex items-center gap-5">
+            <div className="relative flex-shrink-0">
               {user.picture && pfpUrl ? (
                 <img
                   src={pfpUrl}
                   alt="Profile"
-                  className="w-24 h-24 rounded-full object-cover border-2 border-blue-600"
+                  className="w-16 h-16 rounded-2xl object-cover ring-2 ring-blue-600/30"
                 />
               ) : (
-                <div className="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center">
-                  <User size={32} className="text-white" />
+                <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow shadow-blue-600/30">
+                  {userInitial}
                 </div>
               )}
             </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white truncate">
                 {user.name}
               </h2>
-              <p className="text-gray-600 dark:text-gray-400">{user.email}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                {user.email}
+              </p>
             </div>
+            <button
+              onClick={async () => {
+                await fetch(`${SERVER_URL}/api/v1/users/signout`, {
+                  method: 'POST',
+                  credentials: 'include'
+                })
+                window.location.reload()
+              }}
+              className="px-4 py-2 text-sm bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl transition-colors border border-red-100 dark:border-red-500/20 font-medium flex-shrink-0"
+            >
+              Sign Out
+            </button>
           </div>
-          <button
-            onClick={async () => {
-              await fetch(`${SERVER_URL}/api/v1/users/signout`, {
-                method: 'POST',
-                credentials: 'include'
-              })
-              window.location.reload()
-            }}
-            className="mt-4 px-4 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-700 rounded transition-colors border border-red-200 w-fit self-end"
-          >
-            Sign Out
-          </button>
         </div>
 
         {/* Credits Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Zap size={20} className="text-yellow-500" />
-            Available Credits
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white dark:bg-white/[0.04] rounded-2xl p-6 border border-gray-100 dark:border-white/[0.06]">
+          <div className="flex items-center gap-2 mb-5">
+            <Zap size={16} className="text-yellow-500" />
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
+              Available Credits
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {availableModels.map((model) => (
               <div
                 key={model.id}
-                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
+                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/[0.03] rounded-xl border border-gray-100 dark:border-white/[0.05]"
               >
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">{model.name}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{model.provider}</p>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-gray-800 dark:text-gray-100 truncate">
+                    {model.name}
+                  </p>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
+                    {model.provider}
+                  </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                <div className="text-right flex-shrink-0 ml-3">
+                  <p className="text-xl font-bold text-blue-600 dark:text-blue-400 leading-none">
                     {user.numActiveToken?.[model.id] ?? 0}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">credits</p>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">credits</p>
                 </div>
               </div>
             ))}

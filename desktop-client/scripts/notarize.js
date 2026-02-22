@@ -21,4 +21,10 @@ export APPLE_ID="your@email.com"
 export APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
 export APPLE_TEAM_ID="TEAMID"
 export CSC_NAME="Developer ID Application: Your Name (TEAMID)"
+
+xcrun notarytool submit $LLMTORBIN --apple-id $APPLE_ID --team-id $APPLE_TEAM_ID --password $APPLE_APP_SPECIFIC_PASSWORD --wait
+xcrun stapler staple $LLMTORBIN
+##VERIFY
+hdiutil attach $LLMTORBIN
+spctl -a -t exec -vv /Volumes/llmtor\ 1.0.0/llmtor.app
  */

@@ -61,17 +61,17 @@ export const PurchaseTokensPage: React.FC<PurchaseTokensPageProps> = ({ onBack }
       const userId: string | undefined = data?.data?.id
 
       const pkg = packages.find((p) => p.ID === packageId)
-      const paddlePriceID = pkg?.PaddlePriceID
+      const dodoProductID = pkg?.DodoProductID
 
-      if (!transientToken || !userId || !paddlePriceID) {
+      if (!transientToken || !userId || !dodoProductID) {
         throw new Error('Missing required purchase parameters')
       }
 
       // Call into electron backend via the preload API to open a purchase popup
       // The main process will open a popup to `${SERVER_URL}/api/v1/purchase` with query params
-      // { transientToken, paddlePriceID, userID }
+      // { transientToken, dodoProductID, userID }
       // @ts-ignore (window.api is injected by preload)
-      await window.api.startPurchase({ transientToken, paddlePriceID, userID: userId })
+      await window.api.startPurchase({ transientToken, dodoProductID, userID: userId })
     } catch (e: unknown) {
       console.error('Purchase failed', e)
       const message = e instanceof Error ? e.message : String(e)

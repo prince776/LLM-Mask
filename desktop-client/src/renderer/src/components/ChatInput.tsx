@@ -9,7 +9,6 @@ interface ImageAttachment {
 }
 
 interface ChatInputProps {
-  // Updated to send rich payload including images
   onSendMessage: (payload: {
     text: string
     images?: ImageAttachment[]
@@ -39,7 +38,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const text = message.trim()
     const images = attachments
 
-    // Build display text for chat history (embed images as markdown for rendering)
     const imageMarkdown = images.map((img) => `![image](${img.dataUrl})`).join('\n')
     const displayText = [text, imageMarkdown]
       .filter(Boolean)
@@ -60,7 +58,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`
     }
   }, [message])
 
@@ -72,7 +70,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
     for (const file of Array.from(files)) {
       if (!file.type.startsWith('image/')) continue
-      // Limit single image size to ~5MB to avoid huge payloads
       if (file.size > 5 * 1024 * 1024) continue
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader()
@@ -120,63 +117,66 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const canSend = (message.trim().length > 0 || attachments.length > 0) && !disabled && !isLoading
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200 dark:border-gray-700">
-      <div className="relative max-w-4xl mx-auto">
+    <form
+      onSubmit={handleSubmit}
+      className="px-4 pb-4 pt-3 bg-white dark:bg-[#161b27] border-t border-gray-100 dark:border-white/[0.06]"
+    >
+      <div className="max-w-3xl mx-auto">
         {/* Attachment previews */}
         {attachments.length > 0 && (
           <div className="flex gap-2 mb-2 flex-wrap">
             {attachments.map((att, idx) => (
               <div
                 key={`${att.name}-${idx}`}
-                className="relative w-16 h-16 rounded overflow-hidden border border-gray-200 dark:border-gray-700"
+                className="relative w-14 h-14 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-sm"
               >
                 <img src={att.dataUrl} alt={att.name} className="w-full h-full object-cover" />
                 <button
                   type="button"
                   onClick={() => onRemoveAttachment(idx)}
-                  className="absolute -top-2 -right-2 bg-gray-800 text-white rounded-full p-1 shadow"
+                  className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-gray-900 text-white rounded-full flex items-center justify-center shadow"
                   title="Remove"
                 >
-                  <X size={12} />
+                  <X size={9} />
                 </button>
               </div>
             ))}
           </div>
         )}
 
-        <div className="relative" onDrop={onDrop} onDragOver={onDragOver}>
+        <div
+          className={`relative flex items-end gap-2 bg-gray-50 dark:bg-white/[0.04] rounded-2xl border transition-all duration-150 ${
+            disabled || isLoading
+              ? 'border-gray-100 dark:border-white/[0.04] opacity-60'
+              : 'border-gray-200 dark:border-white/[0.08] focus-within:border-blue-500/50 dark:focus-within:border-blue-500/30 focus-within:shadow-[0_0_0_3px_rgba(59,130,246,0.08)]'
+          }`}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+        >
+          {/* Attach button */}
+          <button
+            type="button"
+            onClick={onPickFiles}
+            disabled={disabled || isLoading}
+            className="p-3 text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400 transition-colors flex-shrink-0 disabled:cursor-not-allowed"
+            title="Attach image"
+          >
+            <ImageIcon size={17} />
+          </button>
+
           <textarea
             ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             onPaste={onPaste}
-            placeholder={disabled && disabledText ? disabledText : 'Type your message here...'}
+            placeholder={disabled && disabledText ? disabledText : 'Message LLMTor...'}
             disabled={disabled || isLoading}
             rows={1}
-            className={`
-              w-full px-12 py-3 pr-12 rounded-xl border border-gray-300 dark:border-gray-600
-              bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
-              placeholder-gray-500 dark:placeholder-gray-400
-              focus:ring-2 focus:ring-blue-500 focus:border-transparent
-              resize-none transition-all duration-200
-              ${disabled || isLoading ? 'opacity-50 cursor-not-allowed' : ''}
-              scrollbar-hide
-            `}
-            style={{ minHeight: '48px' }}
+            className="flex-1 py-3 pr-1 bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none resize-none text-sm leading-relaxed scrollbar-hide disabled:cursor-not-allowed"
+            style={{ minHeight: '44px', maxHeight: '200px' }}
           />
-          {/* Attach button */}
-          <button
-            type="button"
-            onClick={onPickFiles}
-            disabled={disabled || isLoading}
-            className={`absolute left-2 top-2 p-2 rounded-lg transition-all duration-200 ${
-              !disabled && !isLoading ? 'hover:bg-gray-100 dark:hover:bg-gray-700' : 'opacity-50'
-            }`}
-            title="Attach image"
-          >
-            <ImageIcon size={20} />
-          </button>
+
           <input
             ref={fileInputRef}
             type="file"
@@ -185,25 +185,30 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             hidden
             onChange={(e) => handleFiles(e.target.files)}
           />
-          <button
-            type="submit"
-            disabled={!canSend}
-            className={`
-              absolute right-2 top-2 p-2 rounded-lg transition-all duration-200
-              ${
+
+          {/* Send button */}
+          <div className="p-2 flex-shrink-0">
+            <button
+              type="submit"
+              disabled={!canSend}
+              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 ${
                 canSend
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
-              }
-            `}
-          >
-            {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
-          </button>
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow shadow-blue-600/30'
+                  : 'bg-gray-200 dark:bg-white/5 text-gray-400 dark:text-gray-600 cursor-not-allowed'
+              }`}
+            >
+              {isLoading ? (
+                <Loader2 size={15} className="animate-spin" />
+              ) : (
+                <Send size={15} className={canSend ? '' : ''} />
+              )}
+            </button>
+          </div>
         </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-          Press Enter to send, Shift+Enter for new line. You can paste, drag & drop, or attach
-          images.
-        </div>
+
+        <p className="text-center text-[11px] text-gray-300 dark:text-gray-600 mt-2">
+          Enter to send · Shift+Enter for new line · Paste or drag images
+        </p>
       </div>
     </form>
   )

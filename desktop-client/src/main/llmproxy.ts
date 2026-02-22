@@ -5,6 +5,7 @@ import { ChatCompletion } from 'openai/src/resources/chat/completions/completion
 import log from 'electron-log/main'
 import { doTorProxiedRequest } from './torproxy'
 import { getStore } from './local-store'
+import { getStoredAbuseTokens } from './abuse-token'
 
 export async function LLMProxy(req: LLMProxyReq): Promise<LLMProxyResp> {
   const { token, signedToken, modelName } = req
@@ -19,7 +20,9 @@ export async function LLMProxy(req: LLMProxyReq): Promise<LLMProxyResp> {
     const localStore = getStore()
     // Make a request to the OpenAI API using the provided model name
     log.info('Making LLM Proxy request with model:', modelName)
-    // log.info('Messages:', JSON.stringify(req.messages))
+
+    const abuseTokens = getStoredAbuseTokens()
+
     const response = await openai.chat.completions.create(
       {
         model: modelName,
@@ -29,7 +32,11 @@ export async function LLMProxy(req: LLMProxyReq): Promise<LLMProxyResp> {
           llmmask: {
             Token: token,
             SignedToken: signedToken,
-            ModelName: modelName
+            ModelName: modelName,
+            PermanentAbuseToken: abuseTokens?.permanentToken ?? '',
+            PermanentAbuseTokenSig: abuseTokens?.permanentSig ?? '',
+            TransientAbuseToken: abuseTokens?.transientToken ?? '',
+            TransientAbuseTokenSig: abuseTokens?.transientSig ?? ''
           }
         }
       },
@@ -50,7 +57,25 @@ export async function LLMProxy(req: LLMProxyReq): Promise<LLMProxyResp> {
         blocked_reason?: string
         size_limit_exceeded?: boolean
         size_limit_reason?: string
+        abuse_token_invalid?: boolean
+        abuse_token_expired?: boolean
+        abuse_token_blacklisted?: boolean
       }
+    }
+
+    if (proxyResp.data.abuse_token_expired) {
+      log.warn('Abuse token expired (transient token needs refresh)')
+      return { data: undefined, abuseTokenExpired: true }
+    }
+
+    if (proxyResp.data.abuse_token_invalid) {
+      log.warn('Abuse token invalid')
+      return { data: undefined, abuseTokenInvalid: true }
+    }
+
+    if (proxyResp.data.abuse_token_blacklisted) {
+      log.warn('Abuse token blacklisted')
+      return { data: undefined, abuseTokenBlacklisted: true }
     }
 
     if (proxyResp.data.is_blocked) {
@@ -73,7 +98,6 @@ export async function LLMProxy(req: LLMProxyReq): Promise<LLMProxyResp> {
       }
     }
 
-    log.info('proxyresp:', proxyResp)
     const respBase64 = proxyResp.data.proxy_response
     const respStr = Buffer.from(respBase64, 'base64').toString('binary')
     const resp: ChatCompletion = JSON.parse(respStr)

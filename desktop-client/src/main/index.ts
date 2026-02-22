@@ -1,12 +1,36 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from 'electron'
+import * as fs from 'fs'
 import { join } from 'path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../prod-deps/icon.png?asset'
-import type { GenerateTokenReq, GenerateTokenResp, LLMProxyReq, LLMProxyResp } from '../types/ipc'
+import type {
+  GenerateTokenReq,
+  GenerateTokenResp,
+  LLMProxyReq,
+  LLMProxyResp,
+  SetupAbuseTokensReq,
+  SetupAbuseTokensResp,
+  RefreshTransientAbuseTokenReq,
+  RefreshTransientAbuseTokenResp,
+  RestoreAbuseTokenBackupReq,
+  RestoreAbuseTokenBackupResp,
+  GetAbuseTokenStatusResp
+} from '../types/ipc'
 
 import log from 'electron-log/main'
 import { GenerateToken, prefetchTokens } from './rsa'
 import { LLMProxy } from './llmproxy'
+import {
+  generatePermanentAbuseToken,
+  generateTransientAbuseToken,
+  saveAbuseTokens,
+  getStoredAbuseTokens,
+  encryptBackup,
+  decryptBackup,
+  uploadBackup,
+  downloadBackup,
+  getCurrentEpoch
+} from './abuse-token'
 import { doTorProxiedRequest, startTorProxy, stopTorProxy, waitForTor } from './torproxy'
 import { getCookieHeader } from './utils'
 import { createServer } from 'http'
@@ -53,13 +77,21 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
-  mainWindow.webContents.openDevTools({ mode: 'detach' })
+
+  // Open DevTools only in development mode
+  if (is.dev) {
+    mainWindow.webContents.openDevTools({ mode: 'detach' })
+  }
 }
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  if (process.platform === 'darwin') {
+    app.dock.setIcon(nativeImage.createFromPath(icon))
+  }
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -118,6 +150,11 @@ app.whenReady().then(() => {
 
           log.info('[Prefetch] Extracted available tokens:', JSON.stringify(numActiveTokens))
 
+          // Random startup delay before issuing any tokens, to reduce timing
+          // correlation between a login event and the first token issuance burst.
+          const startupJitterMs = Math.random() * 60000 // 0–60 seconds
+          await new Promise((resolve) => setTimeout(resolve, startupJitterMs))
+
           // Prefetch tokens for each model, respecting available token limits
           AVAILABLE_MODEL_IDS.forEach((modelName) => {
             const availableTokens = numActiveTokens[modelName] ?? 0
@@ -131,7 +168,9 @@ app.whenReady().then(() => {
             'Failed to fetch user profile for token prefetch, prefetching without limits:',
             err
           )
-          // Fallback: prefetch without limits if user fetch fails
+          // Fallback: prefetch without limits if user fetch fails (same startup jitter)
+          const fallbackJitterMs = Math.random() * 60000 // 0–60 seconds
+          await new Promise((resolve) => setTimeout(resolve, fallbackJitterMs))
           AVAILABLE_MODEL_IDS.forEach((modelName) => {
             prefetchTokens(modelName).catch((err) => {
               log.error('Error prefetching tokens for', modelName, 'on startup:', err)
@@ -188,13 +227,125 @@ app.whenReady().then(() => {
       _event,
       payload: {
         transientToken: string
-        paddlePriceID: string
+        dodoProductID: string
         userID: string
       }
     ) => {
       startPurchaseFlow(payload)
     }
   )
+
+  // Abuse token IPC handlers
+
+  ipcMain.handle(
+    'setup-abuse-tokens',
+    async (_event, req: SetupAbuseTokensReq): Promise<SetupAbuseTokensResp> => {
+      log.info('[IPC]: setup-abuse-tokens')
+      try {
+        const [permanent, transient] = await Promise.all([
+          generatePermanentAbuseToken(),
+          generateTransientAbuseToken()
+        ])
+        const stored = {
+          permanentToken: permanent.token,
+          permanentSig: permanent.sig,
+          transientToken: transient.token,
+          transientSig: transient.sig,
+          transientEpoch: getCurrentEpoch()
+        }
+        saveAbuseTokens(stored)
+        const blob = await encryptBackup(stored, req.password)
+
+        // Always export to file
+        const fileSaved = await saveBackupToFile(blob)
+
+        // Optionally sync to server
+        if (req.uploadToServer) {
+          await uploadBackup(blob)
+        }
+
+        log.info('[IPC]: setup-abuse-tokens complete, fileSaved:', fileSaved)
+        return { fileSaved }
+      } catch (e: any) {
+        log.error('[IPC]: setup-abuse-tokens error:', e)
+        return { fileSaved: false, error: e?.message ?? String(e) }
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'refresh-transient-abuse-token',
+    async (_event, req: RefreshTransientAbuseTokenReq): Promise<RefreshTransientAbuseTokenResp> => {
+      log.info('[IPC]: refresh-transient-abuse-token')
+      try {
+        const existing = getStoredAbuseTokens()
+        if (!existing) {
+          return { fileSaved: false, error: 'No stored abuse tokens found; please run setup first' }
+        }
+
+        const transient = await generateTransientAbuseToken()
+        const updated = {
+          ...existing,
+          transientToken: transient.token,
+          transientSig: transient.sig,
+          transientEpoch: getCurrentEpoch()
+        }
+        saveAbuseTokens(updated)
+        const blob = await encryptBackup(updated, req.password)
+
+        // Always export to file
+        const fileSaved = await saveBackupToFile(blob)
+
+        // Optionally sync to server
+        if (req.uploadToServer) {
+          await uploadBackup(blob)
+        }
+
+        log.info('[IPC]: refresh-transient-abuse-token complete, fileSaved:', fileSaved)
+        return { fileSaved }
+      } catch (e: any) {
+        log.error('[IPC]: refresh-transient-abuse-token error:', e)
+        return { fileSaved: false, error: e?.message ?? String(e) }
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'restore-abuse-token-backup',
+    async (_event, req: RestoreAbuseTokenBackupReq): Promise<RestoreAbuseTokenBackupResp> => {
+      log.info('[IPC]: restore-abuse-token-backup from', req.source)
+      try {
+        let blob: string
+        if (req.source === 'file') {
+          const result = await dialog.showOpenDialog({
+            title: 'Select token backup file',
+            filters: [{ name: 'Token Backup', extensions: ['llmmaskbak'] }],
+            properties: ['openFile']
+          })
+          if (result.canceled || result.filePaths.length === 0) {
+            return { error: 'No file selected' }
+          }
+          blob = fs.readFileSync(result.filePaths[0]).toString('base64')
+        } else {
+          blob = await downloadBackup()
+        }
+        const payload = await decryptBackup(blob, req.password)
+        saveAbuseTokens(payload)
+        log.info('[IPC]: restore-abuse-token-backup complete')
+        return {}
+      } catch (e: any) {
+        log.error('[IPC]: restore-abuse-token-backup error:', e)
+        return { error: e?.message ?? String(e) }
+      }
+    }
+  )
+
+  ipcMain.handle('get-abuse-token-status', async (): Promise<GetAbuseTokenStatusResp> => {
+    const tokens = getStoredAbuseTokens()
+    if (!tokens) return { hasTokens: false, transientExpired: false }
+    const transientExpired = tokens.transientEpoch !== getCurrentEpoch()
+    return { hasTokens: true, transientExpired }
+  })
 
   createWindow()
 
@@ -217,6 +368,23 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   stopTorProxy()
 })
+
+/**
+ * Shows a save-file dialog and writes the backup blob (binary) to the chosen path.
+ * Returns true if the file was saved, false if the user cancelled.
+ */
+async function saveBackupToFile(encryptedBlob: string): Promise<boolean> {
+  const result = await dialog.showSaveDialog({
+    title: 'Save token backup',
+    defaultPath: 'llmtor-token-backup.llmtorbak',
+    filters: [{ name: 'Token Backup', extensions: ['llmmaskbak'] }]
+  })
+  if (result.canceled || !result.filePath) {
+    return false
+  }
+  fs.writeFileSync(result.filePath, Buffer.from(encryptedBlob, 'base64'))
+  return true
+}
 
 function startAuthFlow(): void {
   const redirectUri = `http://127.0.0.1:${REDIRECT_PORT}/callback`
@@ -292,7 +460,7 @@ function startAuthFlow(): void {
 
 function startPurchaseFlow(payload: {
   transientToken: string
-  paddlePriceID: string
+  dodoProductID: string
   userID: string
 }): void {
   const redirectUri = `http://127.0.0.1:${REDIRECT_PORT}/callback`
@@ -329,12 +497,12 @@ function startPurchaseFlow(payload: {
   })
 
   server.listen(REDIRECT_PORT, () => {
-    const { transientToken, paddlePriceID, userID } = payload
+    const { transientToken, dodoProductID, userID } = payload
     const purchaseUrl = `${SERVER_URL}/api/v1/purchase?transientToken=${encodeURIComponent(
       transientToken
-    )}&paddlePriceID=${encodeURIComponent(paddlePriceID)}&userID=${encodeURIComponent(
+    )}&dodoProductID=${encodeURIComponent(dodoProductID)}&userID=${encodeURIComponent(
       userID
-    )}&redirect=${encodeURIComponent(redirectUri)}`
+    )}&redirectURL=${encodeURIComponent(redirectUri)}`
 
     // Popup window for purchase
     authWindow = new BrowserWindow({

@@ -19,22 +19,24 @@ import (
 	"time"
 )
 
-const MaxRequestSizeBytes = 30000 // 30KB limit for LLM proxy requests
+const MaxRequestSizeBytes = 250000 // 250KB limit for LLM proxy requests
 
 // LLMProxy will be responsible for proxying requests, and also all the bookkeeping related to them.
 // This is needed to stop replay attacks, and also stop wastage of tokens in case of network errors.
 type LLMProxy struct {
 	apiKeyManager    *APIKeyManager
 	authManagers     map[confs.ModelName]*auth.AuthManager
+	abuseAuthManager *auth.AbuseAuthManager
 	dbHandler        *models.DBHandler
 	contentModerator *ContentModerator
 	kms              *secrets.AzureKMS
 }
 
-func NewLLMProxy(authManagers map[confs.ModelName]*auth.AuthManager, apiKeyManager *APIKeyManager, dbHandler *models.DBHandler,
+func NewLLMProxy(authManagers map[confs.ModelName]*auth.AuthManager, abuseAuthManager *auth.AbuseAuthManager, apiKeyManager *APIKeyManager, dbHandler *models.DBHandler,
 	contentModerator *ContentModerator, kms *secrets.AzureKMS) *LLMProxy {
 	return &LLMProxy{
 		authManagers:     authManagers,
+		abuseAuthManager: abuseAuthManager,
 		apiKeyManager:    apiKeyManager,
 		dbHandler:        dbHandler,
 		contentModerator: contentModerator,
@@ -55,7 +57,15 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 	}
 
 	// Check request size limit
-	// TODO: Large requests with multiple credits
+	// TODO: Multi-credit support for large requests and reasoning models.
+	// Two cases require consuming more than one blind token per request:
+	//   1. Large context inputs: requests >100KB should cost 2 credits, >200KB should cost 3 credits.
+	//      This prevents users from sending max-size (300KB, ~75K tokens) requests at single-credit price.
+	//   2. Reasoning models (o1, gemini-3-pro, etc.): these silently generate large numbers of internal
+	//      reasoning/thinking tokens that are billed by the upstream but invisible in the request body.
+	//      A single o1 request can cost 10–30x a normal request. Require a fixed credit multiplier
+	//      (e.g. 3–5 credits) for any reasoning model, enforced here before token verification.
+	// Until this is implemented, reasoning models and preview models are disabled in AllModels().
 	if len(bodyBytes) > MaxRequestSizeBytes {
 		return &LLMProxyResponse{
 			SizeLimitExceeded: true,
@@ -119,6 +129,42 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 	destURL, err := url.Parse(destURLStr)
 	if err != nil {
 		return nil, err
+	}
+
+	// Verify permanent abuse token
+	if err := l.abuseAuthManager.VerifyPermanentToken(req.PermanentAbuseToken, req.PermanentAbuseTokenSig); err != nil {
+		return &LLMProxyResponse{AbuseTokenInvalid: true}, nil
+	}
+	// Check permanent abuse token not blacklisted — fail closed on DB error
+	permBlacklist := &models.AbuseTokenBlacklist{
+		DocID: models.DocIDForAbuseToken(req.PermanentAbuseToken),
+	}
+	permFetchErr := l.dbHandler.Fetch(ctx, permBlacklist)
+	if permFetchErr == nil {
+		return &LLMProxyResponse{AbuseTokenBlacklisted: true}, nil
+	}
+	if !models.IsNotFoundErr(permFetchErr) {
+		return nil, errors.Wrapf(permFetchErr, "failed to check permanent abuse token blacklist")
+	}
+
+	// Verify transient abuse token
+	transientErr := l.abuseAuthManager.VerifyTransientToken(req.TransientAbuseToken, req.TransientAbuseTokenSig)
+	if transientErr != nil {
+		if errors.Is(transientErr, auth.ErrAbuseTokenExpired) {
+			return &LLMProxyResponse{AbuseTokenExpired: true}, nil
+		}
+		return &LLMProxyResponse{AbuseTokenInvalid: true}, nil
+	}
+	// Check transient abuse token not blacklisted — fail closed on DB error
+	transBlacklist := &models.AbuseTokenBlacklist{
+		DocID: models.DocIDForAbuseToken(req.TransientAbuseToken),
+	}
+	transFetchErr := l.dbHandler.Fetch(ctx, transBlacklist)
+	if transFetchErr == nil {
+		return &LLMProxyResponse{AbuseTokenBlacklisted: true}, nil
+	}
+	if !models.IsNotFoundErr(transFetchErr) {
+		return nil, errors.Wrapf(transFetchErr, "failed to check transient abuse token blacklist")
 	}
 
 	isTokenValid, err := authManager.VerifyUnBlindedToken(req.Token, req.SignedToken)
@@ -215,7 +261,7 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 		reqFwd := &http.Request{
 			Method: "POST",
 			URL:    destURL,
-			Header: r.Header,
+			Header: make(http.Header), // Never forward client headers; set only what the upstream needs.
 			Body:   io.NopCloser(bytes.NewReader(proxyReqBody)),
 		}
 		reqFwd = reqFwd.WithContext(ctx)

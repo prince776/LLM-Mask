@@ -34,13 +34,19 @@ func (e RSAKeys) ToRedacted() common.Redactable {
 }
 
 var rsaKeysPerModel map[confs.ModelName]*RSAKeys
+var abuseRSAKeys map[string]*RSAKeys
 
 func GetRSAKeysForModel(modelName confs.ModelName) *RSAKeys {
 	return rsaKeysPerModel[modelName]
 }
 
+func GetAbuseRSAKeys(keyName string) *RSAKeys {
+	return abuseRSAKeys[keyName]
+}
+
 func InitRSA(ctx context.Context) {
 	rsaKeysPerModel = make(map[confs.ModelName]*RSAKeys)
+	abuseRSAKeys = make(map[string]*RSAKeys)
 	dbHandler := models.DefaultDBHandler()
 	kms := DefaultKMS()
 	for _, modelName := range confs.AllModels() {
@@ -58,6 +64,24 @@ func InitRSA(ctx context.Context) {
 		rsaKeysForModel := common.Must(RSALoad(privateKeyPT, publicKeyPT))
 		rsaKeysPerModel[modelName] = rsaKeysForModel
 		log.Infof(ctx, "Loaded RSA keys for model: %s", modelName)
+	}
+
+	// Init abuse token RSA keys (permanent and transient)
+	for _, abuseKeyName := range []string{confs.AbuseKeyPermanent, confs.AbuseKeyTransient} {
+		log.Infof(ctx, "Loading rsa for abuse key: %s", abuseKeyName)
+		rsaKey := &models.RSAKeys{
+			DocID: abuseKeyName,
+		}
+		common.Must2(dbHandler.Fetch(ctx, rsaKey))
+
+		dek := common.Must(kms.Decrypt(ctx, string(rsaKey.DEKWrapped), rsaKey.KMSKeyID))
+
+		privateKeyPT := common.Must(DecryptAES(string(rsaKey.PrivateKeyWrapped), string(dek)))
+		publicKeyPT := string(rsaKey.PublicKeyPlaintext)
+
+		rsaKeysForAbuse := common.Must(RSALoad(privateKeyPT, publicKeyPT))
+		abuseRSAKeys[abuseKeyName] = rsaKeysForAbuse
+		log.Infof(ctx, "Loaded RSA keys for abuse key: %s", abuseKeyName)
 	}
 }
 

@@ -1,0 +1,352 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{parskip}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=blue
+}
+
+\title{\textbf{LLM-Tor: Unlinkable Access to Commercial LLM APIs via Blind Signatures and Tor}}
+\author{Prince Gupta}
+\date{March 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+LLM-Tor is a cryptographically enforced privacy layer that enables unlinkable access to commercial
+Large Language Model (LLM) APIs. It separates payment identity from model usage using RSA blind
+signatures (RFC 9474) and onion-routed communication via Tor. The system prevents correlation between
+user identity and chat content at the proxy layer while maintaining compatibility with frontier commercial
+LLM providers.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%% ─────────────────────────────────────────────────────────────────────────────
+\section{Introduction}
+
+Commercial LLM APIs require authenticated access tied to user accounts. This creates a structural privacy
+issue: prompts and responses become permanently associated with identifiable users.
+
+LLM-Tor introduces a cryptographic separation between:
+\begin{itemize}
+  \item Payment identity
+  \item Usage authorization
+  \item Model inference requests
+\end{itemize}
+
+The goal is to ensure that even the proxy operator cannot link a specific prompt to a specific paying
+customer.
+
+%% ─────────────────────────────────────────────────────────────────────────────
+\section{Background}
+
+\subsection{Blind Signatures}
+
+LLM-Tor uses RSA Blind Signatures as defined in RFC 9474, specifically the
+\texttt{RSABSSA\allowbreak-SHA384\allowbreak-PSS\allowbreak-Randomized} suite.
+
+A blind signature scheme allows a signer to sign a message without learning its contents. The protocol
+consists of:
+\begin{enumerate}
+  \item Blinding
+  \item Signing
+  \item Unblinding
+  \item Verification
+\end{enumerate}
+
+Security relies on the hardness of RSA and the one-more RSA assumption.
+
+Let $m$ be a random token. The client computes a blinding factor $r$ and sends:
+\[
+  m' = m \cdot r^e \pmod{N}
+\]
+The server blind-signs:
+\[
+  s' = (m')^d \pmod{N}
+\]
+The client unblinds:
+\[
+  s = s' \cdot r^{-1} \pmod{N}
+\]
+The resulting signature $s$ is valid for $m$, but the signer never sees $m$.
+
+\subsection{Tor Onion Routing}
+
+Tor provides layered encryption and multi-hop routing to hide client IP addresses. LLM-Tor routes all
+anonymous redemption traffic through Tor. In future, the inference endpoint will be exclusively accessible
+as a Tor onion service.
+
+Reasons for using Tor:
+\begin{itemize}
+  \item Prevent IP-level linkage during token redemption
+  \item Eliminate DNS metadata leakage
+  \item Provide probabilistic anonymity against network observers
+\end{itemize}
+
+LLM-Tor does not rely on Tor for cryptographic unlinkability; Tor and blind signatures are independent,
+complementary protections.
+
+%% ─────────────────────────────────────────────────────────────────────────────
+\section{System Architecture}
+
+\subsection{Components}
+
+\begin{itemize}
+  \item Payment Service
+  \item Credit Ledger
+  \item Blind Signing Service
+  \item Token Redemption Proxy
+  \item Moderation Layer
+  \item Upstream LLM Provider
+\end{itemize}
+
+\subsection{Protocol Phases}
+
+\subsubsection{Phase 1: Credit Purchase}
+
+\begin{enumerate}
+  \item User purchases credits via standard payment provider.
+  \item Server records credit balance linked to user identity.
+\end{enumerate}
+Identity exists in this phase.
+
+\subsubsection{Phase 2: Blind Token Issuance}
+
+\begin{enumerate}
+  \item Client generates random token $T$.
+  \item Client blinds $T$ using model-specific public key.
+  \item Server verifies credit availability.
+  \item Server blind-signs the blinded token.
+  \item Client unblinds signature.
+\end{enumerate}
+The server never observes $T$ in unblinded form. Identity exists in this phase.
+
+\subsubsection{Phase 3: Anonymous Redemption}
+
+\begin{enumerate}
+  \item Client establishes Tor circuit.
+  \item Client submits $(T, \sigma)$.
+  \item Server verifies RSA signature.
+  \item Server checks token not previously spent.
+  \item Server forwards prompt to upstream LLM.
+\end{enumerate}
+No identity is present in this phase.
+
+%% ─────────────────────────────────────────────────────────────────────────────
+\section{Token Structure}
+
+Each token contains:
+\begin{itemize}
+  \item A random 128-bit value.
+  \item Model identifier: implicitly linked by choosing the public key specific to that model.
+  \item Key identifier (for rotation) [planned].
+\end{itemize}
+Spent tokens are stored as $\mathrm{hash}(T)$ to prevent replay.
+
+%% ─────────────────────────────────────────────────────────────────────────────
+\section{Abuse Prevention System}
+\label{sec:abuse}
+
+\subsection{Motivation}
+
+Per-request LLM tokens are single-use and fully unlinkable; there is no stable identifier that the proxy
+can use to rate-limit or ban a misbehaving user. Content moderation rejects individual bad requests, but
+does not prevent a determined adversary from repeatedly issuing new tokens and continuing to submit
+harmful content. The abuse-token scheme provides the proxy with a \emph{stable but anonymous} handle
+per user. This is largely motivated from legal compliance and ability to adhere to upstream TOS.
+
+\subsection{Dual-Token Design}
+
+Two tokens serve complementary roles:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Token} & \textbf{Structure} & \textbf{Validity} \\
+\midrule
+Permanent ($A_p$) & 48 random bytes & Lifetime of account \\
+Transient ($A_t$) & 44 random bytes $\|$ 4-byte epoch & One calendar month \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{description}
+  \item[Permanent token $A_p$.]  Issued once per account. Remains valid indefinitely. Blacklisting
+    $A_p$ permanently bans the anonymous pseudonym.
+  \item[Transient token $A_t$.]  Issued once per calendar month. Blacklisting $A_t$ provides a
+    time-bounded ban; the permanent token continues to provide a long-lived~identifier.
+\end{description}
+
+The epoch is defined as $\text{epoch} = \text{year} \times 12 + \text{month}$ (month 1-indexed), encoded
+as a big-endian 32-bit unsigned integer appended to the random bytes. Each token type uses a dedicated
+RSA key pair, independent of the per-model keys.
+
+Both tokens are blind-signed, so the server cannot correlate issuance (where the user is authenticated)
+with redemption (where the user is anonymous over Tor).
+
+\subsection{Issuance}
+\label{sec:abuse:issuance}
+
+Issuance follows the same blind-signature protocol as per-request tokens, using two dedicated RSA key
+pairs:
+
+\begin{enumerate}
+  \item Client generates random bytes (48 for permanent; 44 random $\|$ 4-byte epoch for transient).
+  \item Client blinds with the corresponding abuse public key and sends the blinded token to the server
+        over an authenticated session.
+  \item Server checks that the token type has not already been issued for this account in the current
+        epoch:
+        \begin{itemize}
+          \item Permanent: rejects if \texttt{PermanentAbuseTokenIssuedAt} is non-nil.
+          \item Transient: rejects if \texttt{TransientAbuseTokenEpoch} equals the current epoch.
+        \end{itemize}
+  \item Server blind-signs and records the issuance flag atomically (protected by a per-user distributed
+        semaphore to prevent concurrent double-issuance).
+  \item Client unblinds and verifies the signature.
+\end{enumerate}
+
+\subsection{Blacklisting Mechanism}
+
+Blacklisted tokens are stored by their hash:
+\[
+  \text{DocID} = \mathrm{base64}\!\left(\mathrm{SHA\text{-}256}(A)\right)
+\]
+
+This mirrors the pattern used for spent per-request tokens. The server checks both the permanent and
+transient blacklists on every anonymous request before forwarding to the upstream LLM.
+
+\subsection{Anonymity Properties}
+
+\paragraph{Unlinkability.}
+Because both $A_p$ and $A_t$ are blind-signed, the server cannot link the issuance event (authenticated
+session) to any specific anonymous request. The permanent token creates a persistent \emph{anonymous
+pseudonym}: all requests bearing the same $A_p$ are linkable to each other, but not to the paying
+identity.
+
+\paragraph{Pseudonymity trade-off.}
+The scheme intentionally trades full per-request unlinkability for pseudonymity within a session-less
+context. This is a deliberate design decision: without any stable identifier the proxy has no mechanism to
+enforce abuse bans. The permanent token carries no real-world identity; it is simply a stable random
+value whose signature the proxy can verify.
+
+\paragraph{Tor independence.}
+Abuse-token verification occurs at the application layer. Tor provides network-layer anonymity
+independently; the two protections are orthogonal.
+
+\subsection{Client-Side Backup and Recovery}
+
+The client encrypts the stored tokens for backup using:
+\begin{itemize}
+  \item Key derivation: PBKDF2 (SHA-256, 600\,000 iterations, 128-bit random salt).
+  \item Encryption: AES-256-GCM with a 96-bit random IV.
+  \item Format: $\mathrm{base64}(\text{salt} \,\|\, \text{IV} \,\|\, \text{ciphertext})$.
+\end{itemize}
+
+The encrypted backup is always exported as a local file (\texttt{.llmtorbak}); server-side backup
+storage is opt-in. In the server-sync case the server stores only the client-encrypted ciphertext and
+cannot decrypt it.
+
+%% ─────────────────────────────────────────────────────────────────────────────
+\section{Security Properties}
+
+\subsection{Unlinkability}
+
+Under the security assumptions of RSA blind signatures, issued tokens cannot be linked to redeemed tokens.
+
+\subsection{Single-Use Enforcement}
+
+Tokens are marked spent atomically upon first successful verification. Replay attempts are rejected.
+
+\subsection{Identity Separation}
+
+Payment identity never appears in redemption requests. Redemption occurs exclusively over Tor.
+
+%% ─────────────────────────────────────────────────────────────────────────────
+\section{Moderation Requirement}
+
+LLM-Tor performs content moderation prior to forwarding requests upstream.
+
+Reasons:
+\begin{itemize}
+  \item Legal compliance in certain jurisdictions
+  \item Abuse mitigation (spam, illegal content)
+  \item Prevention of infrastructure misuse
+\end{itemize}
+
+Moderation is performed at the point where content arrives at the proxy; at that point the content is not
+attributable to any user identity.
+
+%% ─────────────────────────────────────────────────────────────────────────────
+\section{Threat Model}
+
+\subsection{Adversaries}
+
+\begin{itemize}
+  \item Honest-but-curious proxy operator
+  \item External network observer
+  \item Malicious user attempting double-spend
+  \item Upstream LLM provider
+\end{itemize}
+
+\subsection{Security Goals}
+
+\begin{itemize}
+  \item Prevent proxy from linking prompt to payment identity
+  \item Prevent token double spending
+  \item Prevent IP-level identity leakage
+\end{itemize}
+
+\subsection{Out of Scope}
+
+\begin{itemize}
+  \item Global passive adversary controlling Tor
+  \item Endpoint compromise
+  \item Logging by upstream LLM providers
+  \item Stylometric fingerprinting
+\end{itemize}
+
+%% ─────────────────────────────────────────────────────────────────────────────
+\section{Key Rotation Policy}
+
+TODO
+
+%% ─────────────────────────────────────────────────────────────────────────────
+\section{Limitations}
+
+LLM-Tor does not provide absolute anonymity. It provides unlinkability at the proxy layer under standard
+cryptographic assumptions, with the added benefit of network anonymity via Tor built into the official
+client.
+
+%% ─────────────────────────────────────────────────────────────────────────────
+\section{Future Work}
+
+\begin{itemize}
+  \item Exclusive Tor onion hosting for the proxy microservice
+  \item Key rotation
+  \item Zero-knowledge token systems
+  \item Anonymous payment integration
+  \item Post-quantum blind signatures
+  \item Decentralized moderation
+\end{itemize}
+
+%% ─────────────────────────────────────────────────────────────────────────────
+\section{Conclusion}
+
+LLM-Tor demonstrates that cryptographic blind signatures combined with onion routing can provide practical
+unlinkability for commercial LLM API access, without requiring local model hosting.
+
+\end{document}

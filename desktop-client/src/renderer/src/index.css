@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: rgba(59, 130, 246, 0.3);
+    color: inherit;
+  }
+}
+
 .scrollbar-hide {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE 10+ */
@@ -11,9 +23,11 @@
   display: none; /* Chrome, Safari, Opera */
 }
 
-/* Force dull white text in dark mode for better readability */
-.dark .prose, .dark .prose-sm, .dark .prose-invert {
-  color: #e5e7eb !important; /* Tailwind zinc-200 */
+/* Force readable text in dark mode for prose content */
+.dark .prose,
+.dark .prose-sm,
+.dark .prose-invert {
+  color: #e5e7eb !important;
 }
 
 .dark .text-gray-900 {

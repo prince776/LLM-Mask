@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useUser } from '../contexts/UserContext'
 import { Message } from '../types'
-import { Bot, User } from 'lucide-react'
+import { Shield } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
@@ -32,6 +32,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   const [isEditingMessage, setIsEditingMessage] = useState(false)
   const [editedContent, setEditedContent] = useState(message.content)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const userInitial = user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '?'
 
   useEffect(() => {
     let isMounted = true
@@ -73,45 +75,58 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 
   return (
     <div
-      className={`flex gap-4 p-6 mb-1 ${isUser ? 'bg-transparent' : 'bg-gray-50 dark:bg-gray-800/50'}`}
+      className={`group flex gap-3 px-5 py-4 transition-colors ${
+        isUser
+          ? 'bg-transparent hover:bg-gray-50/50 dark:hover:bg-white/[0.02]'
+          : 'bg-gray-50/80 dark:bg-white/[0.03] hover:bg-gray-50 dark:hover:bg-white/[0.04]'
+      }`}
     >
       {/* Avatar */}
-      <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center overflow-hidden bg-gray-200 dark:bg-gray-700">
+      <div className="flex-shrink-0 mt-0.5">
         {isUser ? (
           user?.picture && pfpUrl ? (
-            <img src={pfpUrl} alt="User avatar" className="w-8 h-8 object-cover" />
+            <img
+              src={pfpUrl}
+              alt="User avatar"
+              className="w-7 h-7 rounded-full object-cover ring-1 ring-gray-200 dark:ring-white/10"
+            />
           ) : (
-            <div className="w-8 h-8 bg-blue-600 flex items-center justify-center rounded-full">
-              <User size={16} className="text-white" />
+            <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-[11px] font-bold text-white">
+              {userInitial}
             </div>
           )
         ) : (
-          <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center rounded-full">
-            <Bot size={16} className="text-blue-600 dark:text-blue-400" />
+          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shadow shadow-blue-600/20">
+            <Shield size={13} className="text-white" />
           </div>
         )}
       </div>
 
       {/* Message Content */}
       <div className="flex-1 min-w-0">
+        {/* Role label */}
+        <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 mb-1.5 uppercase tracking-wide">
+          {isUser ? (user?.name?.split(' ')[0] || 'You') : 'LLMTor'}
+        </p>
+
         {isEditingMessage ? (
-          <div className="mb-4">
+          <div className="mb-3">
             <textarea
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
-              className="w-full p-3 rounded border border-blue-500 dark:border-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 rounded-xl border border-blue-500/50 dark:border-blue-400/30 bg-white dark:bg-white/5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-sm resize-none"
               rows={4}
               autoFocus
             />
-            <div className="flex gap-2 mt-3">
+            <div className="flex gap-2 mt-2">
               <button
-                className="px-3 py-1.5 text-xs rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                className="px-3 py-1.5 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium"
                 onClick={handleSaveEdit}
               >
                 Save
               </button>
               <button
-                className="px-3 py-1.5 text-xs rounded bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
+                className="px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors font-medium"
                 onClick={() => {
                   setIsEditingMessage(false)
                   setEditedContent(message.content)
@@ -122,71 +137,79 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             </div>
           </div>
         ) : (
-          <div className="prose prose-sm max-w-full dark:prose-invert mb-4 break-words">
-            <ReactMarkdown
-              remarkPlugins={[remarkMath]}
-              rehypePlugins={[rehypeKatex]}
-              urlTransform={(url) => url}
-              components={{
-                hr() {
-                  return <hr style={{ margin: '1.5em 0' }} />
-                },
-                code({ node, className, children, ...props }) {
-                  const match = /language-(\w+)/.exec(className || '')
-                  return match ? (
-                    <SyntaxHighlighter
-                      style={oneDark}
-                      language={match[1]}
-                      PreTag="div"
-                      customStyle={{
-                        borderRadius: '0.5rem',
-                        fontSize: '0.95em',
-                        margin: 0,
-                        wordBreak: 'break-word',
-                        whiteSpace: 'pre-wrap'
-                      }}
-                      {...props}
-                    >
-                      {String(children).replace(/\n$/, '')}
-                    </SyntaxHighlighter>
-                  ) : (
-                    <code className={className} {...props}>
-                      {children}
-                    </code>
-                  )
-                },
-                p({ children }) {
-                  return <p style={{ margin: '0.3em 0' }}>{children}</p>
-                },
-                li({ children }) {
-                  return <li style={{ margin: '0.2em 0' }}>{children}</li>
-                },
-                img({ src, alt }) {
-                  if (!src) return null
-                  return (
-                    <img
-                      src={src}
-                      alt={alt || 'image'}
-                      className="rounded-md border border-gray-200 dark:border-gray-700 block my-2 cursor-default object-contain max-w-sm max-h-60"
-                    />
-                  )
-                }
-              }}
-            >
-              {message.content}
-            </ReactMarkdown>
-            <div className="flex justify-between items-start">
-              <div className="relative flex gap-2">
+          <>
+            <div className="prose prose-sm max-w-full dark:prose-invert break-words">
+              <ReactMarkdown
+                remarkPlugins={[remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+                urlTransform={(url) => url}
+                components={{
+                  hr() {
+                    return <hr style={{ margin: '1.5em 0' }} />
+                  },
+                  code({ node, className, children, ...props }) {
+                    const match = /language-(\w+)/.exec(className || '')
+                    return match ? (
+                      <SyntaxHighlighter
+                        style={oneDark}
+                        language={match[1]}
+                        PreTag="div"
+                        customStyle={{
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875em',
+                          margin: '0.5em 0',
+                          wordBreak: 'break-word',
+                          whiteSpace: 'pre-wrap'
+                        }}
+                        {...props}
+                      >
+                        {String(children).replace(/\n$/, '')}
+                      </SyntaxHighlighter>
+                    ) : (
+                      <code
+                        className={`${className} bg-gray-100 dark:bg-white/10 px-1 py-0.5 rounded text-[0.85em]`}
+                        {...props}
+                      >
+                        {children}
+                      </code>
+                    )
+                  },
+                  p({ children }) {
+                    return <p style={{ margin: '0.3em 0' }}>{children}</p>
+                  },
+                  li({ children }) {
+                    return <li style={{ margin: '0.2em 0' }}>{children}</li>
+                  },
+                  img({ src, alt }) {
+                    if (!src) return null
+                    return (
+                      <img
+                        src={src}
+                        alt={alt || 'image'}
+                        className="rounded-xl border border-gray-200 dark:border-white/10 block my-2 cursor-default object-contain max-w-sm max-h-64"
+                      />
+                    )
+                  }
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              {/* Copy */}
+              <div className="relative">
                 <button
-                  className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+                  className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                   title="Copy message"
                   onClick={handleCopy}
                   onMouseEnter={() => setShowTooltip(true)}
                   onMouseLeave={() => setShowTooltip(false)}
                 >
                   <svg
-                    width="18"
-                    height="18"
+                    width="14"
+                    height="14"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -198,98 +221,107 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                   </svg>
                 </button>
                 {(showTooltip || copied) && (
-                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2 py-1 text-xs rounded bg-gray-800 text-white whitespace-nowrap z-10 shadow-lg">
+                  <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 px-2 py-1 text-[11px] rounded-lg bg-gray-900 dark:bg-white/90 text-white dark:text-gray-900 whitespace-nowrap z-10 shadow-lg font-medium">
                     {copied ? 'Copied!' : 'Copy'}
                   </div>
                 )}
-                {/* Edit Button (only for user messages) */}
-                {isUser && onEdit && !isEditingMessage && (
-                  <button
-                    className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 transition-colors"
-                    title="Edit message"
-                    onClick={() => setIsEditingMessage(true)}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M12 2l2 2-8 8-2 2H2v-2l2-2 8-8z" />
-                    </svg>
-                  </button>
-                )}
-                {/* Delete Button (for both user and assistant messages) */}
-                {onDelete && !isEditingMessage && (
-                  <button
-                    className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors"
-                    title="Delete message"
-                    onClick={() => setShowDeleteConfirm(true)}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                      <line x1="10" y1="11" x2="10" y2="17" />
-                      <line x1="14" y1="11" x2="14" y2="17" />
-                    </svg>
-                  </button>
-                )}
-                {/* Regenerate Response Button (only for last assistant message) */}
-                {isLastAssistant && onRegenerate && (
-                  <button
-                    className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 transition-colors text-xs flex items-center gap-1"
-                    title="Regenerate response"
-                    onClick={onRegenerate}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M1 4v4a4 4 0 0 0 4 4h6" />
-                      <polyline points="15 9 15 5 11 5" />
-                    </svg>
-                    Regenerate Response
-                  </button>
-                )}
               </div>
+
+              {/* Edit (user messages only) */}
+              {isUser && onEdit && !isEditingMessage && (
+                <button
+                  className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  title="Edit message"
+                  onClick={() => setIsEditingMessage(true)}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 2l2 2-8 8-2 2H2v-2l2-2 8-8z" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Delete */}
+              {onDelete && !isEditingMessage && (
+                <button
+                  className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                  title="Delete message"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Regenerate (last assistant message only) */}
+              {isLastAssistant && onRegenerate && (
+                <button
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-[12px] font-medium"
+                  title="Regenerate response"
+                  onClick={onRegenerate}
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M1 4v4a4 4 0 0 0 4 4h6" />
+                    <polyline points="15 9 15 5 11 5" />
+                  </svg>
+                  Regenerate
+                </button>
+              )}
+
+              {/* Timestamp */}
+              <span className="ml-auto text-[11px] text-gray-300 dark:text-gray-600">
+                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
             </div>
-          </div>
+          </>
         )}
+
         {/* Delete Confirmation Dialog */}
         {showDeleteConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-sm">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Delete Message?
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+            <div className="bg-white dark:bg-[#1e2535] rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 border border-gray-100 dark:border-white/[0.08]">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+                Delete message?
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Are you sure you want to delete this message? This action cannot be undone.
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                This action cannot be undone.
               </p>
-              <div className="flex gap-3 justify-end">
+              <div className="flex gap-2 justify-end">
                 <button
-                  className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
+                  className="px-4 py-2 text-sm rounded-xl bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors font-medium"
                   onClick={() => setShowDeleteConfirm(false)}
                 >
                   Cancel
                 </button>
                 <button
-                  className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 transition-colors"
+                  className="px-4 py-2 text-sm rounded-xl bg-red-600 text-white hover:bg-red-700 transition-colors font-medium"
                   onClick={handleDeleteMessage}
                 >
                   Delete
@@ -298,12 +330,6 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             </div>
           </div>
         )}
-        <div className="text-xs text-gray-500 dark:text-gray-400 mt-4">
-          {message.timestamp.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit'
-          })}
-        </div>
       </div>
     </div>
   )

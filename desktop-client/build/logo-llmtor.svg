@@ -1,0 +1,43 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="112" y1="96" x2="912" y2="928" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F172A"/>
+      <stop offset="0.58" stop-color="#102A43"/>
+      <stop offset="1" stop-color="#134E4A"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="294" y1="230" x2="730" y2="812" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34D399"/>
+      <stop offset="1" stop-color="#14B8A6"/>
+    </linearGradient>
+    <linearGradient id="bubble" x1="350" y1="370" x2="676" y2="690" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F0FDFA"/>
+      <stop offset="1" stop-color="#CCFBF1"/>
+    </linearGradient>
+    <filter id="shadow" x="170" y="150" width="684" height="724" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="14"/>
+      <feGaussianBlur stdDeviation="18"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.02 0 0 0 0 0.09 0 0 0 0 0.13 0 0 0 0.45 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_1" result="shape"/>
+    </filter>
+  </defs>
+
+  <rect x="96" y="96" width="832" height="832" rx="180" fill="url(#bg)"/>
+
+  <g filter="url(#shadow)">
+    <path d="M512 200L740 300V500C740 648 646 780 512 832C378 780 284 648 284 500V300L512 200Z" fill="#0B2537"/>
+    <path d="M512 238L706 322V498C706 624 627 736 512 782C397 736 318 624 318 498V322L512 238Z" fill="url(#shield)"/>
+  </g>
+
+  <path d="M384 388H640C680 388 712 420 712 460V578C712 618 680 650 640 650H538L470 710V650H384C344 650 312 618 312 578V460C312 420 344 388 384 388Z" fill="url(#bubble)"/>
+
+  <rect x="454" y="468" width="116" height="96" rx="24" fill="#0F766E"/>
+  <path d="M478 468V446C478 426 494 410 512 410C530 410 546 426 546 446V468" stroke="#99F6E4" stroke-width="20" stroke-linecap="round"/>
+
+  <circle cx="416" cy="516" r="18" fill="#0F766E"/>
+  <circle cx="356" cy="516" r="18" fill="#0F766E"/>
+  <circle cx="476" cy="516" r="18" fill="#0F766E"/>
+</svg>

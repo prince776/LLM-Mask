@@ -3,3 +3,8 @@ tmp/
 .DS_Store
 .idea/
 resources/
+
+# local secrets
+.env
+.env.*
+!.env.example

@@ -41,5 +41,5 @@ export interface TokenPackage {
   Tokens: number
   Price: string
   Popular: boolean
-  PaddlePriceID: string
+  DodoProductID: string
 }

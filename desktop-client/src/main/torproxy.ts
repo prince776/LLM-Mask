@@ -24,14 +24,14 @@ export function startTorProxy(): void {
   const torDir = path.dirname(torPath)
   const geoipPath = path.join(torDir, '..', 'data', 'geoip')
   const geoip6Path = path.join(torDir, '..', 'data', 'geoip6')
-  const libeventPath = path.join(torDir, 'libevent-2.1.7.dylib')
+  // const libeventPath = path.join(torDir, 'libevent-2.1.7.dylib')
 
   // Self-sign the binaries before starting the process
-  if (process.platform === 'darwin') {
-    log.info('signing tor binaries for macOS...')
-    selfSignBinary(torPath)
-    selfSignBinary(libeventPath)
-  }
+  // if (process.platform === 'darwin') {
+  //   log.info('signing tor binaries for macOS...')
+  //   selfSignBinary(torPath)
+  //   selfSignBinary(libeventPath)
+  // }
 
   log.info('Starting Tor proxy...')
   const torArgs = [
@@ -212,6 +212,7 @@ function getTorPath(): string | null {
   }
 }
 
+// @ts-ignore bruh
 /**
  * Self-signs a binary on macOS to bypass Gatekeeper.
  * @param binaryPath The full path to the binary to be signed.

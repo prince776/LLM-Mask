@@ -20,15 +20,15 @@ const (
 func AllModels() []ModelName {
 	return []ModelName{
 		// Google
-		ModelGemini25FlashLite,
+		// ModelGemini25FlashLite, // redundant: weaker than flash, 3-flash also available
 		ModelGemini25Flash,
 		ModelGemini25Pro,
-		ModelGemini3Flash,
-		ModelGemini3Pro,
+		// ModelGemini3Flash, // preview: unstable for production
+		// ModelGemini3Pro,   // deprecated by Google, shutting down March 9 2026
 		// OpenAI
 		ModelChatGPT41,
 		ModelChatGPT41Mini,
-		ModelChatGPT4o,
-		ModelChatGPTo1,
+		// ModelChatGPT4o, // redundant: superseded by gpt-4.1 (cheaper + newer)
+		// ModelChatGPTo1, // reasoning model: needs multi-credit support for large outputs before enabling
 	}
 }
