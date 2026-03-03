@@ -19,14 +19,14 @@ export const AVAILABLE_MODEL_IDS = [
   // Google
   MODEL_IDS.GEMINI_2_5_FLASH,
   MODEL_IDS.GEMINI_2_5_PRO,
-  MODEL_IDS.GEMINI_2_5_FLASH_LITE,
-  MODEL_IDS.GEMINI_3_FLASH,
+  // MODEL_IDS.GEMINI_2_5_FLASH_LITE, // redundant: weaker than flash, 3-flash also available
+  // MODEL_IDS.GEMINI_3_FLASH,         // preview: unstable for production
+  // MODEL_IDS.GEMINI_3_PRO,           // deprecated by Google, shutting down March 9 2026
   // OpenAI
-  MODEL_IDS.GEMINI_3_PRO,
   MODEL_IDS.CHAT_GPT_4_1,
   MODEL_IDS.CHAT_GPT_4_1_MINI,
-  MODEL_IDS.CHAT_GPT_4o,
-  MODEL_IDS.CHAT_GPT_o1
+  // MODEL_IDS.CHAT_GPT_4o,            // redundant: superseded by gpt-4.1 (cheaper + newer)
+  // MODEL_IDS.CHAT_GPT_o1             // reasoning model: needs multi-credit support before enabling
 ] as const
 
 export type ModelId = (typeof AVAILABLE_MODEL_IDS)[number]
