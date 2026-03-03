@@ -275,6 +275,10 @@ if [[ "$ACTION" == "deploy" ]]; then
       --registry-server "$ACR_LOGIN_SERVER" \
       --registry-username "$ACR_USER" \
       --registry-password "$ACR_PASS" \
+      --cpu 1.5 \
+      --memory 3Gi \
+      --min-replicas 1 \
+      --max-replicas 1 \
       --env-vars \
       "${APP_ENV_ARGS[@]}" >/dev/null
   fi
@@ -289,10 +293,14 @@ else
   fi
 fi
 
-echo "Updating runtime env vars..."
+echo "Updating runtime env vars and resource settings..."
 az containerapp update \
   -n "$AZ_CA_APP_NAME" \
   -g "$AZ_RG" \
+  --cpu 1.5 \
+  --memory 3Gi \
+  --min-replicas 1 \
+  --max-replicas 1 \
   --set-env-vars \
   "${APP_ENV_ARGS[@]}" >/dev/null
 
