@@ -238,6 +238,7 @@ Technically any custom client can interact with the LLMTor backend. The public k
 
 ## Pricing
 
+```
 ┌──────────────────┬─────────────┬─────────────┐                                                                                                                                                                                                                      
 │      Model       │    $5.00    │   $15.00    │
 ├──────────────────┼─────────────┼─────────────┤                                                                                                                                                                                                                      
@@ -249,4 +250,4 @@ Technically any custom client can interact with the LLMTor backend. The public k
 ├──────────────────┼─────────────┼─────────────┤
 │ gpt-4.1          │ 80 credits  │ 250 credits │
 └──────────────────┴─────────────┴─────────────┘
-
+```
