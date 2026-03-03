@@ -73,6 +73,11 @@ fi
 cp -r "$SRC" "$DST"
 echo -e "${GREEN}Copied tor dist folder.${NC}"
 
+# Copy icon.png to prod-deps
+echo -e "${YELLOW}Copying icon.png to prod-deps...${NC}"
+cp build/icon.png prod-deps/icon.png
+echo -e "${GREEN}Copied icon.png.${NC}"
+
 # 3. Run npm run build
 echo -e "${BLUE}Running npm run build...${NC}"
 npm run build

@@ -42,7 +42,12 @@ function startTorOnPort(port: number, torPath: string, geoipPath: string, geoip6
       '--GeoIPv6File', geoip6Path
     ]
 
-    torProcess = spawn(torPath, torArgs)
+    const spawnEnv =
+      process.platform === 'linux'
+        ? { ...process.env, LD_LIBRARY_PATH: path.dirname(torPath) }
+        : process.env
+
+    torProcess = spawn(torPath, torArgs, { env: spawnEnv })
 
     const timeout = setTimeout(() => {
       torProcess?.kill()
