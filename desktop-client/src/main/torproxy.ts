@@ -1,4 +1,5 @@
 import { app, session, net } from 'electron'
+import * as os from 'os'
 import { spawn, ChildProcess } from 'child_process'
 import * as path from 'path'
 import * as fs from 'fs'
@@ -7,60 +8,113 @@ import { execSync } from 'node:child_process'
 
 // let mainWindow: BrowserWindow | null
 let torProcess: ChildProcess | null = null
-const TOR_SOCKS_PORT = 9050
+let activeTorPort = 9050
+
+const TOR_PORT_MIN = 9050
+const TOR_PORT_MAX = 9059
 
 const torSessionPartition = 'persist:tor-session'
 
+export function getActiveTorPort(): number {
+  return activeTorPort
+}
+
+class PortInUseError extends Error {
+  constructor(port: number) {
+    super(`Port ${port} is already in use`)
+    this.name = 'PortInUseError'
+  }
+}
+
 /**
- * Starts the Tor proxy as a child process.
+ * Starts Tor on a specific port and waits for bootstrap or a port-in-use error.
  */
-export function startTorProxy(): void {
+function startTorOnPort(port: number, torPath: string, geoipPath: string, geoip6Path: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const dataDir = path.join(os.tmpdir(), `tor-data-${port}`)
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true })
+    }
+    const torArgs = [
+      '--SocksPort', `${port}`,
+      '--DataDirectory', dataDir,
+      '--GeoIPFile', geoipPath,
+      '--GeoIPv6File', geoip6Path
+    ]
+
+    torProcess = spawn(torPath, torArgs)
+
+    const timeout = setTimeout(() => {
+      torProcess?.kill()
+      reject(new Error('Tor bootstrap timed out after 30 seconds.'))
+    }, 30000)
+
+    torProcess.stdout?.on('data', (data: Buffer) => {
+      const output = data.toString()
+      log.info(`[Tor stdout]: ${output}`)
+      if (output.includes('Bootstrapped 100% (done)')) {
+        clearTimeout(timeout)
+        log.info('Tor is fully bootstrapped. Ready for requests.')
+        resolve()
+      } else if (output.includes('Address already in use')) {
+        clearTimeout(timeout)
+        reject(new PortInUseError(port))
+      }
+    })
+
+    torProcess.stderr?.on('data', (data: Buffer) => {
+      log.error(`[Tor stderr]: ${data.toString()}`)
+    })
+
+    torProcess.on('error', (err: Error) => {
+      clearTimeout(timeout)
+      log.error('Failed to start Tor process:', err)
+      reject(err)
+    })
+
+    torProcess.on('close', (code: number | null) => {
+      clearTimeout(timeout)
+      log.info(`Tor process exited with code ${code}`)
+      if (code !== 0) {
+        reject(new Error(`Tor process exited unexpectedly with code ${code}`))
+      }
+    })
+  })
+}
+
+/**
+ * Starts Tor, retrying with incrementing ports if the current port is already in use.
+ */
+export async function startTorWithRetry(): Promise<void> {
   const torPath = getTorPath()
   if (!torPath) {
-    return
+    throw new Error('Tor binary not found for this platform/architecture.')
   }
 
-  // Define the path to the dynamic library
   const torDir = path.dirname(torPath)
   const geoipPath = path.join(torDir, '..', 'data', 'geoip')
   const geoip6Path = path.join(torDir, '..', 'data', 'geoip6')
-  // const libeventPath = path.join(torDir, 'libevent-2.1.7.dylib')
 
-  // Self-sign the binaries before starting the process
-  // if (process.platform === 'darwin') {
-  //   log.info('signing tor binaries for macOS...')
-  //   selfSignBinary(torPath)
-  //   selfSignBinary(libeventPath)
-  // }
+  for (let port = TOR_PORT_MIN; port <= TOR_PORT_MAX; port++) {
+    log.info(`Starting Tor proxy on port ${port}...`)
+    try {
+      await startTorOnPort(port, torPath, geoipPath, geoip6Path)
+      activeTorPort = port
+      return
+    } catch (err) {
+      if (err instanceof PortInUseError && port < TOR_PORT_MAX) {
+        log.warn(`Port ${port} already in use, trying ${port + 1}...`)
+        if (torProcess && !torProcess.killed) {
+          torProcess.kill()
+        }
+        torProcess = null
+        continue
+      }
+      throw err
+    }
+  }
 
-  log.info('Starting Tor proxy...')
-  const torArgs = [
-    '--SocksPort',
-    `${TOR_SOCKS_PORT}`,
-    '--GeoIPFile',
-    geoipPath,
-    '--GeoIPv6File',
-    geoip6Path
-  ]
-
-  torProcess = spawn(torPath, torArgs)
-
-  torProcess.stdout?.on('data', (data: Buffer) => {
-    log.info(`[Tor stdout]: ${data.toString()}`)
-  })
-
-  // Add a listener for the stderr stream to capture error messages from Tor
-  torProcess.stderr?.on('data', (data: Buffer) => {
-    log.error(`[Tor stderr]: ${data.toString()}`)
-  })
-
-  torProcess.on('error', (err: Error) => {
-    log.error('Failed to start Tor process:', err)
-  })
-
-  torProcess.on('close', (code: number | null) => {
-    log.info(`Tor process exited with code ${code}`)
-  })
+  throw new Error(`Failed to start Tor: all ports from ${TOR_PORT_MIN} to ${TOR_PORT_MAX} are in use.`)
 }
 
 /**
@@ -91,7 +145,7 @@ function doTorProxiedRequestInternal(input: string, init?: RequestInit): Promise
 
     torSession
       .setProxy({
-        proxyRules: `socks5://127.0.0.1:${TOR_SOCKS_PORT}`
+        proxyRules: `socks5://127.0.0.1:${activeTorPort}`
       })
       .then(() => {
         // Prepare the request options for net.request
@@ -233,42 +287,3 @@ function selfSignBinary(binaryPath: string): void {
   }
 }
 
-export function waitForTor(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // If torProcess is null or invalid, reject immediately.
-    if (!torProcess || torProcess.killed) {
-      return reject(new Error('Tor process is not running.'))
-    }
-
-    // Set a timeout to prevent an indefinite wait.
-    const timeout = setTimeout(() => {
-      torProcess?.kill()
-      reject(new Error('Tor bootstrap timed out after 30 seconds.'))
-    }, 30000) // 30-second timeout.
-
-    // Listen for data on Tor's stdout stream.
-    torProcess.stdout?.on('data', (data: Buffer) => {
-      const output = data.toString()
-      // Look for the specific message indicating successful bootstrap.
-      if (output.includes('Bootstrapped 100% (done)')) {
-        clearTimeout(timeout)
-        log.info('Tor is fully bootstrapped. Ready for requests.')
-        resolve()
-      }
-    })
-
-    // Listen for a critical error from the child process.
-    torProcess.on('error', (err: Error) => {
-      clearTimeout(timeout)
-      reject(err)
-    })
-
-    // Listen for the process to close unexpectedly.
-    torProcess.on('close', (code: number | null) => {
-      clearTimeout(timeout)
-      if (code !== 0) {
-        reject(new Error(`Tor process exited unexpectedly with code ${code}`))
-      }
-    })
-  })
-}

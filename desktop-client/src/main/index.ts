@@ -31,7 +31,7 @@ import {
   downloadBackup,
   getCurrentEpoch
 } from './abuse-token'
-import { doTorProxiedRequest, startTorProxy, stopTorProxy, waitForTor } from './torproxy'
+import { doTorProxiedRequest, startTorWithRetry, stopTorProxy } from './torproxy'
 import { getCookieHeader } from './utils'
 import { createServer } from 'http'
 import { SERVER_URL } from '../types/config'
@@ -108,8 +108,7 @@ app.whenReady().then(() => {
   if (mainWindow) {
     mainWindow.webContents.send('tor-setup-begin')
   }
-  startTorProxy()
-  waitForTor()
+  startTorWithRetry()
     .then(() => {
       torIsReady = true
       // Send an IPC message to the renderer process
@@ -179,8 +178,12 @@ app.whenReady().then(() => {
         }
       })()
     })
-    .catch((error) => {
+    .catch(async (error) => {
       log.error(error)
+      await dialog.showErrorBox(
+        'Tor Failed to Start',
+        `The Tor network connection could not be established.\n\n${error.message}\n\nThe application will now exit.`
+      )
       process.exit(1)
     })
 
