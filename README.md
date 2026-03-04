@@ -7,76 +7,6 @@ LLM-Tor cannot link identity between users and their chat content.
 
 To build the desktop-client from source, please check README in the directory `/desktop-client`.
 
-## Build
-
-- Build backend locally:
-  - `make build`
-
-## Docker Image
-
-- Build image:
-  - `make docker-image`
-- Run image:
-  - `docker run --rm -p 8080:8080 llmmask-server:latest`
-
-### Build Script
-
-- Local image:
-  - `./scripts/build-image.sh local`
-- Prod image:
-  - `./scripts/build-image.sh prod <repo/image> <tag>`
-
-### Azure Deploy Script
-
-- First deploy (creates/updates RG, ACR, Container Apps env/app):
-  - `az login`
-  - `AZ_ACR_NAME=<uniqueacrname> ./scripts/azure-containerapp.sh deploy`
-- Redeploy new image to existing app:
-  - `AZ_ACR_NAME=<sameacrname> ./scripts/azure-containerapp.sh redeploy`
-- Update only environment variables (no image rebuild/push):
-  - `AZ_ACR_NAME=<sameacrname> ./scripts/azure-containerapp.sh env-only`
-- Load settings/app env vars from local `.env` (default):
-  - `./scripts/azure-containerapp.sh deploy`
-  - Script auto-loads `.env` unless `LOAD_ENV_FILE=0`
-- Use a different env file:
-  - `ENV_FILE=.env.prod ./scripts/azure-containerapp.sh deploy`
-- Optional vars:
-  - `AZ_RG`, `AZ_LOCATION`, `AZ_CA_ENV_NAME`, `AZ_CA_APP_NAME`, `AZ_IMAGE_REPO`, `AZ_IMAGE_TAG`
-  - `AZ_RG_LOCATION`, `AZ_ACR_LOCATION`, `BUILD_PLATFORM`, `BUILD_CACHE_REF`, `SKIP_IF_EXISTS`
-  - `PROD_CREDENTIALS_CONFIG`, `PROD_CREDENTIALS_CONFIG_FILE`
-
-Example `.env`:
-```dotenv
-AZ_ACR_NAME=myacrname
-AZ_RG=my-existing-rg
-AZ_LOCATION=westus2
-AZ_CA_APP_NAME=llmmask
-AZ_IMAGE_TAG=prod-v1
-API_BASE_URL=https://your-app.example.com
-PROD_CREDENTIALS_CONFIG={...}
-```
-
-## GitHub Actions Auto-Deploy
-
-- Workflow file:
-  - `.github/workflows/azure-containerapp-deploy.yml`
-- Trigger:
-  - On push to `main` and `master`
-- Deploy command used by workflow:
-  - `AZ_RG=... AZ_LOCATION=... AZ_ACR_NAME=... ./scripts/azure-containerapp.sh redeploy`
-
-### Configure GitHub Secrets / Variables
-
-1. Add repository variables (`Settings -> Secrets and variables -> Actions -> Variables`):
-   - `AZ_RG` (example: `llmmaskprod`)
-   - `AZ_LOCATION` (example: `westus2`)
-   - `AZ_ACR_NAME` (example: `llmmaskacr`)
-2. Configure Azure auth (choose one):
-   - Option A: secret `AZURE_CREDENTIALS` with the full service principal JSON for `azure/login`.
-   - Option B (OIDC): secrets `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
-3. Add secret `DEPLOY_ENV_FILE` containing the full `.env` file content (multi-line).
-   - The workflow writes this secret to `.env` before running the deploy script.
-
 ## Why?
 
 Public LLM APIs link prompts to user accounts.
@@ -251,3 +181,74 @@ Technically any custom client can interact with the LLMTor backend. The public k
 │ gpt-4.1          │ 80 credits  │ 250 credits │
 └──────────────────┴─────────────┴─────────────┘
 ```
+
+## Development
+### Build
+
+- Build backend locally:
+    - `make build`
+
+### Docker Image
+
+- Build image:
+    - `make docker-image`
+- Run image:
+    - `docker run --rm -p 8080:8080 llmmask-server:latest`
+
+### Build Script
+
+- Local image:
+    - `./scripts/build-image.sh local`
+- Prod image:
+    - `./scripts/build-image.sh prod <repo/image> <tag>`
+
+### Azure Deploy Script
+
+- First deploy (creates/updates RG, ACR, Container Apps env/app):
+    - `az login`
+    - `AZ_ACR_NAME=<uniqueacrname> ./scripts/azure-containerapp.sh deploy`
+- Redeploy new image to existing app:
+    - `AZ_ACR_NAME=<sameacrname> ./scripts/azure-containerapp.sh redeploy`
+- Update only environment variables (no image rebuild/push):
+    - `AZ_ACR_NAME=<sameacrname> ./scripts/azure-containerapp.sh env-only`
+- Load settings/app env vars from local `.env` (default):
+    - `./scripts/azure-containerapp.sh deploy`
+    - Script auto-loads `.env` unless `LOAD_ENV_FILE=0`
+- Use a different env file:
+    - `ENV_FILE=.env.prod ./scripts/azure-containerapp.sh deploy`
+- Optional vars:
+    - `AZ_RG`, `AZ_LOCATION`, `AZ_CA_ENV_NAME`, `AZ_CA_APP_NAME`, `AZ_IMAGE_REPO`, `AZ_IMAGE_TAG`
+    - `AZ_RG_LOCATION`, `AZ_ACR_LOCATION`, `BUILD_PLATFORM`, `BUILD_CACHE_REF`, `SKIP_IF_EXISTS`
+    - `PROD_CREDENTIALS_CONFIG`, `PROD_CREDENTIALS_CONFIG_FILE`
+
+Example `.env`:
+```dotenv
+AZ_ACR_NAME=myacrname
+AZ_RG=my-existing-rg
+AZ_LOCATION=westus2
+AZ_CA_APP_NAME=llmmask
+AZ_IMAGE_TAG=prod-v1
+API_BASE_URL=https://your-app.example.com
+PROD_CREDENTIALS_CONFIG={...}
+```
+
+### GitHub Actions Auto-Deploy
+
+- Workflow file:
+    - `.github/workflows/azure-containerapp-deploy.yml`
+- Trigger:
+    - On push to `main` and `master`
+- Deploy command used by workflow:
+    - `AZ_RG=... AZ_LOCATION=... AZ_ACR_NAME=... ./scripts/azure-containerapp.sh redeploy`
+
+### Configure GitHub Secrets / Variables
+
+1. Add repository variables (`Settings -> Secrets and variables -> Actions -> Variables`):
+    - `AZ_RG` (example: `llmmaskprod`)
+    - `AZ_LOCATION` (example: `westus2`)
+    - `AZ_ACR_NAME` (example: `llmmaskacr`)
+2. Configure Azure auth (choose one):
+    - Option A: secret `AZURE_CREDENTIALS` with the full service principal JSON for `azure/login`.
+    - Option B (OIDC): secrets `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
+3. Add secret `DEPLOY_ENV_FILE` containing the full `.env` file content (multi-line).
+    - The workflow writes this secret to `.env` before running the deploy script.
