@@ -130,33 +130,6 @@ flowchart TD
     G -->|Rejected| F
 ```
 
-### Trust boundaries
-
-```mermaid
-flowchart LR
-
-    subgraph Identity Phase
-        Payment["Payment Provider"]
-        Ledger["Credit Ledger (Identity Linked)"]
-    end
-
-    subgraph Blind Issuance Phase
-        Signing["Blind Signing Service"]
-    end
-
-    subgraph Anonymous Usage Phase
-        Proxy["LLM Proxy"]
-        Moderation["Moderation API"]
-        LLM["Upstream LLM"]
-    end
-
-    Payment --> Ledger
-    Ledger --> Signing
-    Signing --> Proxy
-    Proxy --> Moderation
-    Proxy --> LLM
-```
-
 ## License
 
 See LICENSE file in this directory.
