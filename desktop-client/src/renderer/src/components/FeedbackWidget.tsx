@@ -151,7 +151,7 @@ export function FeedbackWidget() {
               </p>
             ) : entries.length === 0 ? (
               <p className="text-sm text-gray-400 dark:text-gray-500 text-center mt-10">
-                Send us a message — we reply within 24h
+                Send us a message
               </p>
             ) : (
               entries.map((entry, i) =>
