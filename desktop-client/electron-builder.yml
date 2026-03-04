@@ -3,6 +3,8 @@ productName: llmtor
 directories:
   buildResources: build
 files:
+  - '!release-artifacts/*'
+  - '!prod-deps-all/*'
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'

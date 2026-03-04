@@ -1,9 +1,9 @@
 {
   "name": "llmtor",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "A cryptographic privacy relay for public LLMs",
   "main": "./out/main/index.js",
-  "author": "example.com",
+  "author": "llmtor.com",
   "homepage": "https://electron-vite.org",
   "scripts": {
     "format": "prettier --write .",

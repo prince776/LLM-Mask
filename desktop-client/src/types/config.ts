@@ -4,7 +4,7 @@ import { MODEL_IDS } from './models'
 // const DEV_SERVER_URL =  'https://api.llmtor.com'
 const DEV_SERVER_URL =  'http://localhost:8080'
 const PROD_SERVER_URL = 'https://api.llmtor.com'
-const IS_PROD = process.env.NODE_ENV === 'production'
+const IS_PROD = import.meta.env.PROD
 
 export const SERVER_URL = process.env.API_BASE_URL || (IS_PROD ? PROD_SERVER_URL : DEV_SERVER_URL)
 
