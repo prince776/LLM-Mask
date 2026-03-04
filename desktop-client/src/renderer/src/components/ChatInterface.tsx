@@ -73,6 +73,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // Abuse token modal state
   const [showAbuseSetup, setShowAbuseSetup] = useState(false)
+  const [abuseTokenAlreadyIssued, setAbuseTokenAlreadyIssued] = useState(false)
   const [showTransientExpired, setShowTransientExpired] = useState(false)
   // Pending message to send after token setup
   const pendingMessageRef = useRef<Parameters<typeof handleSendMessage>[0] | null>(null)
@@ -135,6 +136,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const abuseStatus = await window.api.getAbuseTokenStatus()
       if (!abuseStatus.hasTokens) {
         pendingMessageRef.current = payload
+        setAbuseTokenAlreadyIssued(abuseStatus.permanentTokenIssued)
         setShowAbuseSetup(true)
         return
       }
@@ -275,6 +277,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     <div className="flex flex-col h-full bg-white dark:bg-[#161b27]">
       {showAbuseSetup && (
         <AbuseTokenSetupModal
+          alreadyIssued={abuseTokenAlreadyIssued}
           onSetup={handleAbuseSetup}
           onRestoreFromFile={handleAbuseRestoreFromFile}
           onRestoreFromServer={handleAbuseRestoreFromServer}

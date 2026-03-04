@@ -80,4 +80,5 @@ export interface RestoreAbuseTokenBackupResp {
 export interface GetAbuseTokenStatusResp {
   hasTokens: boolean
   transientExpired: boolean
+  permanentTokenIssued: boolean
 }

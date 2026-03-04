@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Shield, Lock, AlertTriangle, Server, FolderOpen } from 'lucide-react'
 
 interface AbuseTokenSetupModalProps {
+  alreadyIssued?: boolean
   onSetup: (password: string, uploadToServer: boolean) => Promise<void>
   onRestoreFromFile: (password: string) => Promise<void>
   onRestoreFromServer: (password: string) => Promise<void>
@@ -10,11 +11,12 @@ interface AbuseTokenSetupModalProps {
 type Mode = 'setup' | 'restore-file' | 'restore-server'
 
 export const AbuseTokenSetupModal: React.FC<AbuseTokenSetupModalProps> = ({
+  alreadyIssued = false,
   onSetup,
   onRestoreFromFile,
   onRestoreFromServer
 }) => {
-  const [mode, setMode] = useState<Mode>('setup')
+  const [mode, setMode] = useState<Mode>(alreadyIssued ? 'restore-file' : 'setup')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [uploadToServer, setUploadToServer] = useState(false)
@@ -67,9 +69,22 @@ export const AbuseTokenSetupModal: React.FC<AbuseTokenSetupModalProps> = ({
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
               Anonymous Access Setup
             </h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">One-time setup required</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {alreadyIssued ? 'Restore your anonymous access tokens' : 'One-time setup required'}
+            </p>
           </div>
         </div>
+
+        {/* Notice when tokens were already issued (reinstall / data loss) */}
+        {alreadyIssued && (
+          <div className="flex gap-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/40 rounded-xl p-3.5 mb-5">
+            <AlertTriangle size={15} className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+              Your anonymous access tokens were already issued. Restore them from your backup file
+              or from the server if you enabled server sync.
+            </p>
+          </div>
+        )}
 
         {/* Warning (setup only) */}
         {mode === 'setup' && (
@@ -85,9 +100,9 @@ export const AbuseTokenSetupModal: React.FC<AbuseTokenSetupModalProps> = ({
         {/* Mode tabs */}
         <div className="flex gap-1 p-1 bg-gray-100 dark:bg-white/5 rounded-xl mb-5">
           {([
-            { id: 'setup', label: 'New Setup' },
-            { id: 'restore-file', label: 'From File', icon: <FolderOpen size={11} className="inline mr-1" /> },
-            { id: 'restore-server', label: 'From Server', icon: <Server size={11} className="inline mr-1" /> }
+            ...(!alreadyIssued ? [{ id: 'setup' as Mode, label: 'New Setup' }] : []),
+            { id: 'restore-file' as Mode, label: 'From File', icon: <FolderOpen size={11} className="inline mr-1" /> },
+            { id: 'restore-server' as Mode, label: 'From Server', icon: <Server size={11} className="inline mr-1" /> }
           ] as { id: Mode; label: string; icon?: React.ReactNode }[]).map(({ id, label, icon }) => (
             <button
               key={id}

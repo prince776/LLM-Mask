@@ -1,21 +1,26 @@
 import React, { useState } from 'react'
-import { RefreshCw, Lock } from 'lucide-react'
+import { RefreshCw, Lock, X } from 'lucide-react'
 
 interface TransientTokenExpiredModalProps {
   onRefresh: (password: string, uploadToServer: boolean) => Promise<void>
+  onClose?: () => void
 }
 
 export const TransientTokenExpiredModal: React.FC<TransientTokenExpiredModalProps> = ({
-  onRefresh
+  onRefresh,
+  onClose
 }) => {
   const [password, setPassword] = useState('')
-  const [uploadToServer, setUploadToServer] = useState(false)
+  const [confirm, setConfirm] = useState('')
+  const [uploadToServer, setUploadToServer] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    if (password !== confirm) { setError('Passwords do not match.'); return }
+    if (password.length < 8) { setError('Password must be at least 8 characters.'); return }
     setLoading(true)
     try {
       await onRefresh(password, uploadToServer)
@@ -34,7 +39,7 @@ export const TransientTokenExpiredModal: React.FC<TransientTokenExpiredModalProp
           <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
             <RefreshCw size={18} className="text-white" />
           </div>
-          <div>
+          <div className="flex-1">
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
               Monthly Token Renewal
             </h2>
@@ -42,18 +47,26 @@ export const TransientTokenExpiredModal: React.FC<TransientTokenExpiredModalProp
               Your session token has expired
             </p>
           </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
 
         <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed mb-5">
-          Your transient access token expires each month. Enter your backup password to renew
-          it and save an updated backup file.
+          Your transient access token expires each month. Choose a password to encrypt and
+          save an updated backup file.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               <Lock size={11} className="inline mr-1" />
-              Backup password
+              New backup password
             </label>
             <input
               type="password"
@@ -63,6 +76,20 @@ export const TransientTokenExpiredModal: React.FC<TransientTokenExpiredModalProp
               className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/40"
               required
               autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Confirm password
+            </label>
+            <input
+              type="password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder="••••••••"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/40"
+              required
             />
           </div>
 

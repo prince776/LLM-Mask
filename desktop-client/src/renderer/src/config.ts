@@ -1,5 +1,6 @@
 // src/renderer/src/config.ts
-const DEV_SERVER_URL = 'https://api.llmtor.com' // 'http://localhost:8080'
+// const DEV_SERVER_URL = 'https://api.llmtor.com'
+const DEV_SERVER_URL =  'http://localhost:8080'
 const PROD_SERVER_URL = 'https://api.llmtor.com'
 
 export const SERVER_URL =

@@ -345,9 +345,27 @@ app.whenReady().then(() => {
 
   ipcMain.handle('get-abuse-token-status', async (): Promise<GetAbuseTokenStatusResp> => {
     const tokens = getStoredAbuseTokens()
-    if (!tokens) return { hasTokens: false, transientExpired: false }
+    if (!tokens) {
+      // Check server to see if a permanent abuse token was ever issued for this account.
+      // This distinguishes a first-time setup from a reinstall/data-loss scenario.
+      let permanentTokenIssued = false
+      try {
+        const resp = await fetch(`${SERVER_URL}/api/v1/me`, {
+          method: 'GET',
+          headers: { ...(await getCookieHeader()), 'Content-Type': 'application/json' }
+        })
+        if (resp.ok) {
+          const data = await resp.json()
+          const issuedAt = data?.data?.PermanentAbuseTokenIssuedAt ?? data?.PermanentAbuseTokenIssuedAt
+          permanentTokenIssued = issuedAt != null
+        }
+      } catch {
+        // If server is unreachable, default to false (show all options)
+      }
+      return { hasTokens: false, transientExpired: false, permanentTokenIssued }
+    }
     const transientExpired = tokens.transientEpoch !== getCurrentEpoch()
-    return { hasTokens: true, transientExpired }
+    return { hasTokens: true, transientExpired, permanentTokenIssued: true }
   })
 
   createWindow()

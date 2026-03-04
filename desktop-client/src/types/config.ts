@@ -1,7 +1,8 @@
 // Shared config for Electron main and renderer
 import { MODEL_IDS } from './models'
 
-const DEV_SERVER_URL =  'https://api.llmtor.com' // http://localhost:8080'
+// const DEV_SERVER_URL =  'https://api.llmtor.com'
+const DEV_SERVER_URL =  'http://localhost:8080'
 const PROD_SERVER_URL = 'https://api.llmtor.com'
 const IS_PROD = process.env.NODE_ENV === 'production'
 

@@ -24,8 +24,9 @@ type User struct {
 	ProfileImage string // URL to user's profile image
 
 	// Abuse token tracking
-	PermanentAbuseTokenIssuedAt *time.Time // nil = never issued
-	TransientAbuseTokenEpoch    uint32     // last issued epoch (0 = never)
+	PermanentAbuseTokenIssuedAt   *time.Time // nil = never issued
+	TransientAbuseTokenEpoch      uint32     // last issued epoch (0 = never)
+	TransientAbuseTokenRotations  uint32     // number of tokens issued for the current epoch
 
 	// Transient Info, not really persisted
 	TransientToken string

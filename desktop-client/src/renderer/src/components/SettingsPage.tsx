@@ -1,7 +1,8 @@
-import React from 'react'
-import { ArrowLeft, Moon, Sun, Download, Trash2, Upload } from 'lucide-react'
+import React, { useState } from 'react'
+import { ArrowLeft, Moon, Sun, Download, Trash2, Upload, RefreshCw } from 'lucide-react'
 import { useTheme } from '../contexts/ThemeContext'
 import { useSettings } from '../contexts/SettingsContext'
+import { TransientTokenExpiredModal } from './TransientTokenExpiredModal'
 import { Chat } from '../types'
 
 interface SettingsPageProps {
@@ -11,6 +12,13 @@ interface SettingsPageProps {
 export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
   const { theme, toggleTheme } = useTheme()
   const { systemPrompt, setSystemPrompt } = useSettings()
+  const [showRotateModal, setShowRotateModal] = useState(false)
+
+  const handleRotateToken = async (password: string, uploadToServer: boolean) => {
+    const resp = await window.api.refreshTransientAbuseToken({ password, uploadToServer })
+    if (resp.error) throw new Error(resp.error)
+    setShowRotateModal(false)
+  }
 
   const handleExportChats = () => {
     const chats = localStorage.getItem('chats')
@@ -55,6 +63,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
 
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-[#161b27]">
+      {showRotateModal && (
+        <TransientTokenExpiredModal onRefresh={handleRotateToken} onClose={() => setShowRotateModal(false)} />
+      )}
       <div className="max-w-2xl mx-auto p-6">
         {/* Header */}
         <div className="flex items-center gap-3 mb-7">
@@ -117,6 +128,29 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack }) => {
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
             Prepended to every conversation as a system message.
           </p>
+        </div>
+
+        {/* Security */}
+        <div className="bg-white dark:bg-white/[0.04] rounded-2xl p-5 mb-4 border border-gray-100 dark:border-white/[0.06]">
+          <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">
+            Security
+          </h3>
+          <button
+            onClick={() => setShowRotateModal(true)}
+            className="w-full flex items-center gap-3 px-3 py-3 text-left hover:bg-gray-50 dark:hover:bg-white/[0.04] rounded-xl transition-colors group"
+          >
+            <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+              <RefreshCw size={14} className="text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
+                Rotate Monthly Token
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                Issue a new anonymous token if you suspect your current one was compromised
+              </p>
+            </div>
+          </button>
         </div>
 
         {/* Data Management */}

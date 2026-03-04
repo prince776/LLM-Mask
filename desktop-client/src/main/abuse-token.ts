@@ -89,7 +89,7 @@ export async function generatePermanentAbuseToken(): Promise<{ token: string; si
   if (!resp.ok) {
     const errData = await resp.json().catch(() => ({}))
     log.error('Failed to issue permanent abuse token:', errData)
-    throw errData
+    throw new Error(errData?.error ?? errData?.status ?? `Server error ${resp.status}`)
   }
 
   const data = await resp.json()
@@ -139,7 +139,7 @@ export async function generateTransientAbuseToken(): Promise<{ token: string; si
   if (!resp.ok) {
     const errData = await resp.json().catch(() => ({}))
     log.error('Failed to issue transient abuse token:', errData)
-    throw errData
+    throw new Error(errData?.error ?? errData?.status ?? `Server error ${resp.status}`)
   }
 
   const data = await resp.json()
@@ -217,7 +217,12 @@ export async function decryptBackup(encryptedBlob: string, password: string): Pr
 
   const key = await deriveKey(password, salt)
 
-  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext)
+  let plaintext: ArrayBuffer
+  try {
+    plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext)
+  } catch {
+    throw new Error('Incorrect password')
+  }
   const dec = new TextDecoder()
   return JSON.parse(dec.decode(plaintext)) as BackupPayload
 }
