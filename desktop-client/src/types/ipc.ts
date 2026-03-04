@@ -82,3 +82,24 @@ export interface GetAbuseTokenStatusResp {
   transientExpired: boolean
   permanentTokenIssued: boolean
 }
+
+// ---- Feedback IPC types ----
+
+export interface ThreadEntry {
+  Role: 'user' | 'admin'
+  Content: string
+  CreatedAt: string
+}
+
+export interface GetFeedbackResp {
+  entries?: ThreadEntry[]
+  error?: string
+}
+
+export interface SendFeedbackReq {
+  message: string
+}
+
+export interface SendFeedbackResp {
+  error?: string
+}

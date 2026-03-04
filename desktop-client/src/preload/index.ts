@@ -11,7 +11,10 @@ import type {
   RefreshTransientAbuseTokenResp,
   RestoreAbuseTokenBackupReq,
   RestoreAbuseTokenBackupResp,
-  GetAbuseTokenStatusResp
+  GetAbuseTokenStatusResp,
+  GetFeedbackResp,
+  SendFeedbackReq,
+  SendFeedbackResp
 } from '../types/ipc'
 
 // Custom APIs for renderer
@@ -60,6 +63,12 @@ const api = {
   },
   getAbuseTokenStatus: async (): Promise<GetAbuseTokenStatusResp> => {
     return await ipcRenderer.invoke('get-abuse-token-status')
+  },
+  getFeedback: async (): Promise<GetFeedbackResp> => {
+    return await ipcRenderer.invoke('feedback-get')
+  },
+  sendFeedback: async (req: SendFeedbackReq): Promise<SendFeedbackResp> => {
+    return await ipcRenderer.invoke('feedback-send', req)
   }
 }
 

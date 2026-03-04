@@ -14,7 +14,11 @@ import type {
   RefreshTransientAbuseTokenResp,
   RestoreAbuseTokenBackupReq,
   RestoreAbuseTokenBackupResp,
-  GetAbuseTokenStatusResp
+  GetAbuseTokenStatusResp,
+  ThreadEntry,
+  GetFeedbackResp,
+  SendFeedbackReq,
+  SendFeedbackResp
 } from '../types/ipc'
 
 import log from 'electron-log/main'
@@ -342,6 +346,39 @@ app.whenReady().then(() => {
       }
     }
   )
+
+  ipcMain.handle('feedback-get', async (): Promise<GetFeedbackResp> => {
+    try {
+      const resp = await fetch(`${SERVER_URL}/api/v1/feedback`, {
+        method: 'GET',
+        headers: { ...(await getCookieHeader()), 'Content-Type': 'application/json' }
+      })
+      if (!resp.ok) {
+        return { error: `Server error: ${resp.status}` }
+      }
+      const data = await resp.json()
+      return { entries: (data?.data?.entries ?? []) as ThreadEntry[] }
+    } catch (e: any) {
+      return { error: e?.message ?? String(e) }
+    }
+  })
+
+  ipcMain.handle('feedback-send', async (_e, req: SendFeedbackReq): Promise<SendFeedbackResp> => {
+    try {
+      const resp = await fetch(`${SERVER_URL}/api/v1/feedback`, {
+        method: 'POST',
+        headers: { ...(await getCookieHeader()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: req.message })
+      })
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}))
+        return { error: data?.error ?? `Server error: ${resp.status}` }
+      }
+      return {}
+    } catch (e: any) {
+      return { error: e?.message ?? String(e) }
+    }
+  })
 
   ipcMain.handle('get-abuse-token-status', async (): Promise<GetAbuseTokenStatusResp> => {
     const tokens = getStoredAbuseTokens()

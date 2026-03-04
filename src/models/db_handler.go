@@ -85,6 +85,29 @@ func (d *DBHandler) ContainerRef(m Model) *azcosmos.ContainerClient {
 	return containerClient
 }
 
+func (d *DBHandler) Query(ctx context.Context, container string, query string) ([]json.RawMessage, error) {
+	containerClient, err := d.client.NewContainer(d.databaseName, container)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get container client")
+	}
+	pager := containerClient.NewQueryItemsPager(
+		query,
+		azcosmos.NewPartitionKeyString(DefaultPartitionKey),
+		nil,
+	)
+	var results []json.RawMessage
+	for pager.More() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to query items")
+		}
+		for _, item := range page.Items {
+			results = append(results, json.RawMessage(item))
+		}
+	}
+	return results, nil
+}
+
 func IsNotFoundErr(err error) bool {
 	var responseErr *azcore.ResponseError
 	if errors.As(err, &responseErr) {

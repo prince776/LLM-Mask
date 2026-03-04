@@ -6,6 +6,7 @@ import { ProfilePage } from './components/ProfilePage'
 import { SettingsPage } from './components/SettingsPage'
 import { PurchaseTokensPage } from './components/PurchaseTokensPage'
 import { NotificationBanner } from './components/NotificationBanner'
+import { FeedbackWidget } from './components/FeedbackWidget'
 import { useChats } from './hooks/useChats'
 import { useUser } from './contexts/UserContext'
 import { useNotifications } from './contexts/NotificationContext'
@@ -198,6 +199,7 @@ function App() {
             <div className="flex-1 flex flex-col min-w-0">{renderCurrentPage()}</div>
           </div>
         </div>
+        <FeedbackWidget />
       </SettingsProvider>
     </ThemeProvider>
   )

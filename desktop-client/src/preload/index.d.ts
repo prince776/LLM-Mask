@@ -10,7 +10,10 @@ import type {
   RefreshTransientAbuseTokenResp,
   RestoreAbuseTokenBackupReq,
   RestoreAbuseTokenBackupResp,
-  GetAbuseTokenStatusResp
+  GetAbuseTokenStatusResp,
+  GetFeedbackResp,
+  SendFeedbackReq,
+  SendFeedbackResp
 } from '../types/ipc'
 
 declare global {
@@ -33,6 +36,8 @@ declare global {
       refreshTransientAbuseToken: (req: RefreshTransientAbuseTokenReq) => Promise<RefreshTransientAbuseTokenResp>
       restoreAbuseTokenBackup: (req: RestoreAbuseTokenBackupReq) => Promise<RestoreAbuseTokenBackupResp>
       getAbuseTokenStatus: () => Promise<GetAbuseTokenStatusResp>
+      getFeedback: () => Promise<GetFeedbackResp>
+      sendFeedback: (req: SendFeedbackReq) => Promise<SendFeedbackResp>
     }
   }
 }
