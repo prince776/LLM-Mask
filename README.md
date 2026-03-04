@@ -34,6 +34,16 @@ it via tor exit node only. Onion only deployment is planned.
 - Tor-based anonymity
 - No chat persistence
 
+## Abuse Detection
+
+For use in commercial domain, abuse detection and prevention is required. It's again done via blindrsa.
+Every anonymous LLM request includes two long-lived blind-signed abuse tokens alongside the per-request token:
+
+- **Permanent token** — issued once per account, valid for its lifetime.
+- **Transient token** — issued monthly, encodes the current epoch. Can be rotated in case it is stolen.
+
+Both are blind-signed and verified server-side before any request is forwarded. They create a persistent anonymous pseudonym: requests are linkable to each other, but not to any real identity. Abusive pseudonyms can be blacklisted without exposing the user's identity.
+
 ## Threat Model
 
 Protects against:
