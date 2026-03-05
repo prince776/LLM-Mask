@@ -149,22 +149,6 @@ For desktop-client, a separate license is present in its directory.
 Technically any custom client can interact with the LLMTor backend. The public keys used by the models are present at:
 `desktop-client/src/types/config.ts`
 
-## Pricing
-
-```
-┌──────────────────┬─────────────┬─────────────┐                                                                                                                                                                                                                      
-│      Model       │    $5.00    │   $15.00    │
-├──────────────────┼─────────────┼─────────────┤                                                                                                                                                                                                                      
-│ gemini-2.5-flash │ 150 credits │ 450 credits │          
-├──────────────────┼─────────────┼─────────────┤
-│ gemini-2.5-pro   │ 80 credits  │ 250 credits │
-├──────────────────┼─────────────┼─────────────┤
-│ gpt-4.1-mini     │ 180 credits │ 550 credits │
-├──────────────────┼─────────────┼─────────────┤
-│ gpt-4.1          │ 80 credits  │ 250 credits │
-└──────────────────┴─────────────┴─────────────┘
-```
-
 ## Development
 ### Build
 
