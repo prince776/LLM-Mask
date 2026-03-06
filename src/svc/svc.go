@@ -88,6 +88,7 @@ func (s *Service) Run() {
 
 	r.Get("/health", s.health)
 	r.Get("/", s.health)
+	r.Get("/demo", s.DemoHandler)
 	r.Get("/admin", s.AdminDashboardHandler)
 	r.Get("/admin/notifications", s.AdminDashboardHandler)
 
