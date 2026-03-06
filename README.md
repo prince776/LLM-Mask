@@ -33,6 +33,8 @@ See whitepaper.pdf at the root of the repo.
 
 ## Architecture
 
+Interactive Protocol Demo: https://api.llmtor.com/demo
+
 ### High-Level Architecture
 
 ```mermaid
