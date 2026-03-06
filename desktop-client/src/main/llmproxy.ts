@@ -99,7 +99,7 @@ export async function LLMProxy(req: LLMProxyReq): Promise<LLMProxyResp> {
     }
 
     const respBase64 = proxyResp.data.proxy_response
-    const respStr = Buffer.from(respBase64, 'base64').toString('binary')
+    const respStr = Buffer.from(respBase64, 'base64').toString('utf-8')
     const resp: ChatCompletion = JSON.parse(respStr)
 
     return {
