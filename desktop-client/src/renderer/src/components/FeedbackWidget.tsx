@@ -12,7 +12,8 @@ export function FeedbackWidget() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const lastSeenCountRef = useRef(0)
+  const SEEN_KEY = 'feedback_seen_admin_count'
+  const lastSeenCountRef = useRef(parseInt(localStorage.getItem(SEEN_KEY) ?? '0', 10))
   const { user } = useUser()
 
   const fetchEntries = async (): Promise<ThreadEntry[] | undefined> => {
@@ -39,7 +40,9 @@ export function FeedbackWidget() {
     fetchEntries()
       .then((fetched) => {
         if (fetched) {
-          lastSeenCountRef.current = fetched.length
+          const adminCount = fetched.filter((e) => e.Role === 'admin').length
+          lastSeenCountRef.current = adminCount
+          localStorage.setItem(SEEN_KEY, String(adminCount))
           setUnreadCount(0)
         }
       })
@@ -62,10 +65,9 @@ export function FeedbackWidget() {
       if (!resp || resp.error) return
       const fetched = resp.entries ?? []
       const adminCount = fetched.filter((e) => e.Role === 'admin').length
-      const seenAdminCount = entries.filter((e) => e.Role === 'admin').length
-      if (adminCount > seenAdminCount) {
+      if (adminCount > lastSeenCountRef.current) {
         setEntries(fetched)
-        setUnreadCount(adminCount - Math.max(seenAdminCount, lastSeenCountRef.current - (entries.length - seenAdminCount)))
+        setUnreadCount(adminCount - lastSeenCountRef.current)
       }
     }
     const interval = setInterval(poll, 30000)
@@ -96,7 +98,11 @@ export function FeedbackWidget() {
       } else {
         // Refresh to get server-stamped entry
         const fetched = await fetchEntries()
-        if (fetched) lastSeenCountRef.current = fetched.length
+        if (fetched) {
+          const adminCount = fetched.filter((e) => e.Role === 'admin').length
+          lastSeenCountRef.current = adminCount
+          localStorage.setItem(SEEN_KEY, String(adminCount))
+        }
       }
     } catch (e: any) {
       setError(e?.message ?? 'Unknown error')
