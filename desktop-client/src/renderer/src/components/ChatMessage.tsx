@@ -144,41 +144,37 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 rehypePlugins={[rehypeKatex]}
                 urlTransform={(url) => url}
                 components={{
-                  hr() {
-                    return <hr style={{ margin: '1.5em 0' }} />
+                  pre({ children }) {
+                    return <>{children}</>
                   },
-                  code({ node, className, children, ...props }) {
+                  code({ className, children }) {
                     const match = /language-(\w+)/.exec(className || '')
-                    return match ? (
-                      <SyntaxHighlighter
-                        style={oneDark}
-                        language={match[1]}
-                        PreTag="div"
-                        customStyle={{
-                          borderRadius: '0.5rem',
-                          fontSize: '0.875em',
-                          margin: '0.5em 0',
-                          wordBreak: 'break-word',
-                          whiteSpace: 'pre-wrap'
-                        }}
-                        {...props}
-                      >
-                        {String(children).replace(/\n$/, '')}
-                      </SyntaxHighlighter>
-                    ) : (
-                      <code
-                        className={`${className} bg-gray-100 dark:bg-white/10 px-1 py-0.5 rounded text-[0.85em]`}
-                        {...props}
-                      >
-                        {children}
-                      </code>
-                    )
-                  },
-                  p({ children }) {
-                    return <p style={{ margin: '0.3em 0' }}>{children}</p>
-                  },
-                  li({ children }) {
-                    return <li style={{ margin: '0.2em 0' }}>{children}</li>
+                    if (match) {
+                      return (
+                        <div className="not-prose rounded-xl overflow-hidden my-3 border border-gray-200 dark:border-white/[0.08] shadow-sm">
+                          <div className="flex items-center px-4 py-1.5 bg-gray-50 dark:bg-[#1e2535] border-b border-gray-200 dark:border-white/[0.06]">
+                            <span className="text-[10px] font-mono font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                              {match[1]}
+                            </span>
+                          </div>
+                          <SyntaxHighlighter
+                            style={oneDark}
+                            language={match[1]}
+                            PreTag="div"
+                            customStyle={{
+                              margin: 0,
+                              borderRadius: 0,
+                              fontSize: '0.8125rem',
+                              lineHeight: '1.6',
+                              padding: '1rem 1.25rem',
+                            }}
+                          >
+                            {String(children).replace(/\n$/, '')}
+                          </SyntaxHighlighter>
+                        </div>
+                      )
+                    }
+                    return <code className={className}>{children}</code>
                   },
                   img({ src, alt }) {
                     if (!src) return null

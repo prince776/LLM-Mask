@@ -380,7 +380,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
           </div>
         ) : (
-          <div>
+          <div className="max-w-3xl mx-auto w-full py-2">
             {chat?.messages.map((message, idx) => {
               const isLastAssistant =
                 message.role === 'assistant' &&
@@ -402,7 +402,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               )
             })}
             {loadingState.isLoading && (
-              <div className="flex gap-4 px-6 py-5">
+              <div className="flex gap-4 px-5 py-4">
                 <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0 shadow shadow-blue-600/20">
                   <Shield size={13} className="text-white" />
                 </div>

@@ -23,17 +23,9 @@
   display: none; /* Chrome, Safari, Opera */
 }
 
-/* Force readable text in dark mode for prose content */
-.dark .prose,
-.dark .prose-sm,
-.dark .prose-invert {
-  color: #e5e7eb !important;
-}
-
-.dark .text-gray-900 {
-  color: #e5e7eb !important;
-}
-
-.dark .text-black {
-  color: #e5e7eb !important;
+/* KaTeX display equations */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5em 0;
 }
