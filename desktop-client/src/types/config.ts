@@ -2,7 +2,7 @@
 import { MODEL_IDS } from './models'
 
 // const DEV_SERVER_URL =  'https://api.llmtor.com'
-const DEV_SERVER_URL =  'http://localhost:8080'
+const DEV_SERVER_URL = 'http://localhost:8080'
 const PROD_SERVER_URL = 'https://api.llmtor.com'
 const IS_PROD = import.meta.env.PROD
 
@@ -99,6 +99,26 @@ wZfQ+XejAFMkKrZDDta+ntRfSjEM7oZOQCQgttyWGrZM+V37EJiYpUce3VYZ9e0p
 ZwIDAQAB
 -----END PUBLIC KEY-----`
 
+const gpt5MiniPublicKey = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzxvc1bxrDw0UnggePY7Z
+bikc3rqPKYc5opMFOoO0cR1XHQsH29/hM+tQlDCtmiRQzQYoH9RCKjEfEWrl4j1m
+1+2WZmEkF4YelRGTPsDyi8Oj7TryIlPv8DMYIWWhLpnvhowJr3o8iOkP+JfDp5R3
+Q+9K8BwtDkmLMm0u+HWzN5xi7RSDyiKWTXGH3tdZVqRL7Wk6dysbC16Dln0CdwUc
+TNmlyGwxpYPvJILj7mb+Ct+S7QBIZTDoYF3/LHVVh36zwK82bCqKLuenqkWjYHIO
+skCl2rLshyLG7ezgbpSVqXOMFPjQkec2KkgFmeMHZ7ojx+6o9IAgNCExw5f9mqgk
+OwIDAQAB
+-----END PUBLIC KEY-----`
+
+const gpt53PublicKey = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8Hzk3lmk6sBhlOJais8h
+mAT0Qg2rhMc+Fda0kHOlE8LRHKo/SNbGpkG2N5rQ9iZbDlbiefTm7kPuIH4wILpX
+DPWZAlHptcKG5k/4fl9ndxnyn2zR8kPKce5Se/OkAhHfGe6QOYWJymO+dAulid1K
+R2xoAbChEi1+DuOvnvu/cQQbSm+rA7KRhcgEKlzBL7BkxihEOTLbkCrOZJ2kj8j8
+HFTgINb/yYpoqD3nfjnxCxs2mm6FTWVhXzM3JqsJ17sdatNgYO0hwYaUH/Sxhazl
+MI37C9KwficlU00sN0CaF7wU6RnRG4CvMVRqIR13a0snyx9/B151rbHo72V6Z/I5
+KQIDAQAB
+-----END PUBLIC KEY-----`
+
 export const RSAKeys = {
   [MODEL_IDS.GEMINI_2_5_FLASH_LITE]: gemini25FlashLitePublicKey,
   [MODEL_IDS.GEMINI_2_5_FLASH]: gemini25FlashPublicKey,
@@ -108,7 +128,9 @@ export const RSAKeys = {
   [MODEL_IDS.CHAT_GPT_4_1_MINI]: gpt41MiniPublicKey,
   [MODEL_IDS.CHAT_GPT_4_1]: gpt41PublicKey,
   [MODEL_IDS.CHAT_GPT_4o]: gpt4oPublicKey,
-  [MODEL_IDS.CHAT_GPT_o1]: o1PublicKey
+  [MODEL_IDS.CHAT_GPT_o1]: o1PublicKey,
+  [MODEL_IDS.CHAT_GPT_5_3]: gpt53PublicKey,
+  [MODEL_IDS.CHAT_GPT_5_MINI]: gpt5MiniPublicKey
 }
 
 // Abuse token RSA public keys (fetched from server at deploy time, same pattern as model keys).

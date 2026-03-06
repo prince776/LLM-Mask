@@ -47,6 +47,18 @@ export const availableModels: LLMModel[] = [
     description: 'Smaller, faster, and cost-efficient variant of GPT-4.1'
   },
   {
+    id: MODEL_IDS.CHAT_GPT_5_3,
+    name: 'GPT-5.3',
+    provider: 'OpenAI',
+    description: "OpenAI's extremely capable model"
+  },
+  {
+    id: MODEL_IDS.CHAT_GPT_5_MINI,
+    name: 'GPT-5 Mini',
+    provider: 'OpenAI',
+    description: 'Fast and efficient GPT-5 variant'
+  },
+  {
     id: MODEL_IDS.CHAT_GPT_4o,
     name: 'GPT-4o',
     provider: 'OpenAI',

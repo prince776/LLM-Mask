@@ -15,6 +15,8 @@ const (
 	ModelChatGPT41Mini = "gpt-4.1-mini"
 	ModelChatGPT4o     = "gpt-4o"
 	ModelChatGPTo1     = "o1"
+	ModelChatGPT53     = "gpt-5.3-chat"
+	ModelChatGPT5Mini  = "gpt-5-mini"
 )
 
 func AllModels() []ModelName {
@@ -28,6 +30,8 @@ func AllModels() []ModelName {
 		// OpenAI
 		ModelChatGPT41,
 		ModelChatGPT41Mini,
+		ModelChatGPT53,
+		ModelChatGPT5Mini,
 		// ModelChatGPT4o, // redundant: superseded by gpt-4.1 (cheaper + newer)
 		// ModelChatGPTo1, // reasoning model: needs multi-credit support for large outputs before enabling
 	}

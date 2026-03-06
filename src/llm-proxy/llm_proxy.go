@@ -125,7 +125,10 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 		return nil, err
 	}
 
-	destURLStr := DestURLForModel(intendedModel)
+	destURLStr, err := l.apiKeyManager.GetEndpointForModel(intendedModel)
+	if err != nil {
+		return nil, err
+	}
 	destURL, err := url.Parse(destURLStr)
 	if err != nil {
 		return nil, err
@@ -273,8 +276,8 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 			reqFwd.Header.Set("content-type", "application/json")
 			// TODO: Removing gzip for now, use it later.
 			reqFwd.Header.Set("Accept-Encoding", "identity")
-		case confs.ModelChatGPT41Mini, confs.ModelChatGPT41, confs.ModelChatGPT4o, confs.ModelChatGPTo1:
-			//reqFwd.Header.Set("x-goog-api-key", apiKey.UnsafeString())
+		case confs.ModelChatGPT41Mini, confs.ModelChatGPT41, confs.ModelChatGPT4o, confs.ModelChatGPTo1,
+			confs.ModelChatGPT53, confs.ModelChatGPT5Mini:
 			reqFwd.Header.Set("Authorization", "Bearer "+apiKey.UnsafeString())
 			reqFwd.Header.Set("content-type", "application/json")
 			// TODO: Removing gzip for now, use it later.

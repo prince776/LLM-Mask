@@ -67,7 +67,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
         <div className="absolute top-full right-0 mt-1.5 bg-white dark:bg-[#1e2535] border border-gray-200 dark:border-white/[0.08] rounded-2xl shadow-xl dark:shadow-black/40 z-50 overflow-hidden min-w-[280px]">
           <div className="max-h-80 overflow-y-auto scrollbar-hide">
             {/* Group by provider */}
-            {['Google', 'OpenAI'].map((provider) => {
+            {['OpenAI', 'Google'].map((provider) => {
               const providerModels = availableModels.filter((m) => m.provider === provider)
               return (
                 <div key={provider}>

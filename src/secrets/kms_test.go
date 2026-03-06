@@ -13,7 +13,7 @@ import (
 func TestBulkEncryptAndSaveKeys(t *testing.T) {
 	log.Init()
 	modelsToProvision := []string{
-		confs.ModelChatGPT41Mini, confs.ModelChatGPT41, confs.ModelChatGPT4o, confs.ModelChatGPTo1,
+		confs.ModelChatGPT5Mini, confs.ModelChatGPT53,
 	}
 	ctx := context.Background()
 

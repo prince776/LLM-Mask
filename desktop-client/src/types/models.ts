@@ -12,7 +12,9 @@ export const MODEL_IDS = {
   CHAT_GPT_4_1: 'gpt-4.1',
   CHAT_GPT_4_1_MINI: 'gpt-4.1-mini',
   CHAT_GPT_4o: 'gpt-4o',
-  CHAT_GPT_o1: 'o1'
+  CHAT_GPT_o1: 'o1',
+  CHAT_GPT_5_3: 'gpt-5.3-chat',
+  CHAT_GPT_5_MINI: 'gpt-5-mini'
 } as const
 
 export const AVAILABLE_MODEL_IDS = [
@@ -25,6 +27,8 @@ export const AVAILABLE_MODEL_IDS = [
   // OpenAI
   MODEL_IDS.CHAT_GPT_4_1,
   MODEL_IDS.CHAT_GPT_4_1_MINI,
+  MODEL_IDS.CHAT_GPT_5_3,
+  MODEL_IDS.CHAT_GPT_5_MINI,
   // MODEL_IDS.CHAT_GPT_4o,            // redundant: superseded by gpt-4.1 (cheaper + newer)
   // MODEL_IDS.CHAT_GPT_o1             // reasoning model: needs multi-credit support before enabling
 ] as const

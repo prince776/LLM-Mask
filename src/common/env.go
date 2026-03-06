@@ -55,13 +55,18 @@ func PlatformCredsConfig() *CredsConfig {
 
 type CredsConfig struct {
 	Cosmos                 *CosmosDBCredsConfig    `json:"cosmos"`
-	LLMAPIKeys             map[string][]string     `json:"llm_api_keys"`
+	LLMAPIKeys             map[string]LLMProviderConfig `json:"llm_api_keys"`
 	KeyVaultCreds          *KeyVaultCredsConfig    `json:"key_vault_creds"`
 	ContentModeratorConfig *ContentModeratorConfig `json:"content_moderator_config"`
 	UserOAuthCreds         *UserOAuthCreds         `json:"user_oauth_creds"`
 	DodoPaymentsCreds      *DodoPaymentsCreds      `json:"dodo_payments_creds"`
 	ModelPackages          []ModelTokenPackage     `json:"model_packages"`
 	AdminAPIKey            string                  `json:"admin_api_key"`
+}
+
+type LLMProviderConfig struct {
+	Keys     []string `json:"keys"`
+	Endpoint string   `json:"endpoint"`
 }
 
 type DodoPaymentsCreds struct {

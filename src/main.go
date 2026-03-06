@@ -27,10 +27,12 @@ func main() {
 
 	llmAPIKeys := common.PlatformCredsConfig().LLMAPIKeys
 	apiKeys := map[confs.ModelName][]common.SecretString{}
-	for modelName, plainAPIKeys := range llmAPIKeys {
-		apiKeys[modelName] = common.Map(plainAPIKeys, common.NewSecretString)
+	endpoints := map[confs.ModelName]string{}
+	for modelName, providerConf := range llmAPIKeys {
+		apiKeys[modelName] = common.Map(providerConf.Keys, common.NewSecretString)
+		endpoints[modelName] = providerConf.Endpoint
 	}
-	apiKeyManager := llm_proxy.NewAPIKeyManager(apiKeys)
+	apiKeyManager := llm_proxy.NewAPIKeyManager(apiKeys, endpoints)
 	authManagers := map[confs.ModelName]*auth.AuthManager{}
 	for _, modelName := range confs.AllModels() {
 		authManagers[modelName] = auth.NewAuthManager(secrets.GetRSAKeysForModel(modelName))
