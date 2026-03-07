@@ -680,7 +680,7 @@ const phases = [
       },
       {
         title: "Payment processed by Paddle",
-        desc: "Paddle processes the payment and fires a webhook to the LLM-Tor Server confirming the transaction.",
+        desc: "Stripe processes the payment and fires a webhook to the LLM-Tor Server confirming the transaction.",
         showElements: ["p1-user", "p1-paddle", "p1-arrow1"],
         crypto: `<span class="hl-amber">Webhook payload includes:</span>\n• user_id (OAuth identity)\n• amount paid\n• transaction ID\n\nServer verifies webhook signature\nfrom Paddle before crediting.`
       },

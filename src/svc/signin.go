@@ -121,7 +121,7 @@ func (s *Service) signInUser(ctx context.Context, oauthConf *oauth2.Config, toke
 	if models.IsNotFoundErr(err) {
 		user.SubscriptionInfo = models.SubscriptionInfo{
 			ActiveAuthTokens: map[string]int{
-				confs.ModelChatGPT41Mini: 10,
+				confs.ModelChatGPT41Mini: 5,
 				confs.ModelChatGPT41:     1,
 			},
 		}
