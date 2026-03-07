@@ -5,6 +5,8 @@ LLM-Tor is a privacy-preserving proxy layer for public LLM APIs.
 It cryptographically separates payment identity from model usage using blind signatures and Tor routing so that even
 LLM-Tor cannot link identity between users and their chat content.
 
+Interactive Protocol Demo: https://api.llmtor.com/demo
+
 To build the desktop-client from source, please check README in the directory `/desktop-client`.
 
 ## Why?
@@ -32,8 +34,6 @@ it via tor exit node only. Onion only deployment is planned.
 See whitepaper.pdf at the root of the repo.
 
 ## Architecture
-
-Interactive Protocol Demo: https://api.llmtor.com/demo
 
 ### High-Level Architecture
 
