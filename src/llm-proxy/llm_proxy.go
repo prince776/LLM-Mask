@@ -16,6 +16,7 @@ import (
 	"maps"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -260,7 +261,18 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 		}
 		log.Infof(ctx, "Blocked due to offensive")
 	} else {
-		proxyReqBody, err = TransformProxyReqBody(intendedModel, proxyReqBody)
+		proxyReqBody, apiKind, err := TransformProxyReqBody(intendedModel, proxyReqBody)
+		if err != nil {
+			return nil, err
+		}
+		switch apiKind {
+		case apiKindOpenAIResponses:
+			// Switch the endpoint from /chat/completions to /responses.
+			destURL.Path = strings.Replace(destURL.Path, "/chat/completions", "/responses", 1)
+		case apiKindGeminiNative:
+			// Switch from the OpenAI-compat path to the native generateContent path.
+			destURL.Path = strings.Replace(destURL.Path, "/openai/chat/completions", "/models/"+string(intendedModel)+":generateContent", 1)
+		}
 		reqFwd := &http.Request{
 			Method: "POST",
 			URL:    destURL,
@@ -272,7 +284,8 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 		switch intendedModel {
 		case confs.ModelGemini25Flash, confs.ModelGemini25Pro, confs.ModelGemini25FlashLite, confs.ModelGemini3Flash, confs.ModelGemini3Pro:
 			reqFwd.Header.Set("x-goog-api-key", apiKey.UnsafeString())
-			reqFwd.Header.Set("Authorization", "Bearer "+apiKey.UnsafeString())
+			// Native generateContent uses x-goog-api-key only; OpenAI-compat also accepted Bearer but
+			// the native endpoint rejects it with UNAUTHENTICATED / ACCESS_TOKEN_TYPE_UNSUPPORTED.
 			reqFwd.Header.Set("content-type", "application/json")
 			// TODO: Removing gzip for now, use it later.
 			reqFwd.Header.Set("Accept-Encoding", "identity")
@@ -297,6 +310,28 @@ func (l *LLMProxy) ServeRequest(r *http.Request) (*LLMProxyResponse, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		switch apiKind {
+		case apiKindOpenAIResponses:
+			if proxyResp.StatusCode != http.StatusOK {
+				log.Infof(ctx, "responses API returned non-200 status=%d", proxyResp.StatusCode)
+			} else {
+				proxyRespBytes, err = convertFromResponsesAPI(proxyRespBytes)
+				if err != nil {
+					return nil, errors.Wrapf(err, "failed to convert responses API response")
+				}
+			}
+		case apiKindGeminiNative:
+			if proxyResp.StatusCode != http.StatusOK {
+				log.Infof(ctx, "gemini native API returned non-200 status=%d", proxyResp.StatusCode)
+			} else {
+				proxyRespBytes, err = convertFromGeminiNative(proxyRespBytes, string(intendedModel))
+				if err != nil {
+					return nil, errors.Wrapf(err, "failed to convert gemini native response")
+				}
+			}
+		}
+
 		resp = &LLMProxyResponse{
 			Metadata:      []byte("lgtm"),
 			ProxyResponse: proxyRespBytes,
@@ -346,6 +381,29 @@ func CleanProxyRequest(req map[string]any) {
 	}
 }
 
-func TransformProxyReqBody(modelName string, proxyReqBody []byte) ([]byte, error) {
-	return proxyReqBody, nil
+type proxyAPIKind int
+
+const (
+	apiKindChatCompletions proxyAPIKind = iota // passthrough — no conversion
+	apiKindOpenAIResponses                     // OpenAI Responses API (/v1/responses)
+	apiKindGeminiNative                        // Gemini generateContent native API
+)
+
+// TransformProxyReqBody converts the request body to the appropriate upstream format.
+func TransformProxyReqBody(modelName string, proxyReqBody []byte) (body []byte, kind proxyAPIKind, err error) {
+	if isOpenAIModel(modelName) {
+		converted, convErr := convertToResponsesAPI(proxyReqBody)
+		if convErr != nil {
+			return nil, apiKindChatCompletions, convErr
+		}
+		return converted, apiKindOpenAIResponses, nil
+	}
+	if isGeminiModel(modelName) {
+		converted, convErr := convertToGeminiNative(proxyReqBody)
+		if convErr != nil {
+			return nil, apiKindChatCompletions, convErr
+		}
+		return converted, apiKindGeminiNative, nil
+	}
+	return proxyReqBody, apiKindChatCompletions, nil
 }
