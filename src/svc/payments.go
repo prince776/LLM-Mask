@@ -2,6 +2,7 @@ package svc
 
 import (
 	"fmt"
+	"github.com/cockroachdb/errors"
 	"net/http"
 
 	"github.com/dodopayments/dodopayments-go"
@@ -48,12 +49,17 @@ func (s *Service) PurchaseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Infof(ctx, "Executing purchase: userID=%s, productID=%s, transientToken=%s", userID, productID, transientToken)
+	log.Infof(ctx, "Executing purchase: userID=%s, productID=%s", userID, productID)
 
 	user, err := s.getUserFromDocID(ctx, userID)
 	if err != nil {
 		render.Render(w, r, ErrInternal(err))
 		return
+	}
+
+	expectedTransientToken := s.getTransientUserToken(userID)
+	if expectedTransientToken != transientToken {
+		render.Render(w, r, ErrUnauthorized(errors.New("transient token does not match")))
 	}
 
 	dodoCreds := common.PlatformCredsConfig().DodoPaymentsCreds
