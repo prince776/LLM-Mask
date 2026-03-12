@@ -275,8 +275,8 @@ if [[ "$ACTION" == "deploy" ]]; then
       --registry-server "$ACR_LOGIN_SERVER" \
       --registry-username "$ACR_USER" \
       --registry-password "$ACR_PASS" \
-      --cpu 2 \
-      --memory 4Gi \
+      --cpu 0.5 \
+      --memory 1Gi \
       --min-replicas 1 \
       --max-replicas 1 \
       --env-vars \
