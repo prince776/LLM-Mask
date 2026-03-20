@@ -65,7 +65,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onEditMessage,
   onDeleteMessage
 }) => {
-  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash')
+  const [selectedModel, setSelectedModel] = useState('gpt-4.1-mini')
   const [loadingState, setLoadingState] = useState<LoadingState>({ isLoading: false, message: '' })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { systemPrompt } = useSettings()

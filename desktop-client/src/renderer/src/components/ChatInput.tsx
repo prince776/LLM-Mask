@@ -64,6 +64,36 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const onPickFiles = (): void => fileInputRef.current?.click()
 
+  const compressImage = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const img = new Image()
+      const objectUrl = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl)
+        const MAX_DIM = 512
+        let { width, height } = img
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width)
+            width = MAX_DIM
+          } else {
+            width = Math.round((width * MAX_DIM) / height)
+            height = MAX_DIM
+          }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', 0.75))
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl)
+        reject(new Error('Failed to load image'))
+      }
+      img.src = objectUrl
+    })
+
   const handleFiles = async (files: FileList | null): Promise<void> => {
     if (!files) return
     const newAttachments: ImageAttachment[] = []
@@ -71,13 +101,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     for (const file of Array.from(files)) {
       if (!file.type.startsWith('image/')) continue
       if (file.size > 5 * 1024 * 1024) continue
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = (err) => reject(err)
-        reader.readAsDataURL(file)
-      })
-      newAttachments.push({ name: file.name, mime: file.type, dataUrl, size: file.size })
+      const dataUrl = await compressImage(file)
+      newAttachments.push({ name: file.name, mime: 'image/jpeg', dataUrl, size: dataUrl.length })
     }
 
     if (newAttachments.length) setAttachments((prev) => [...prev, ...newAttachments])
