@@ -84,6 +84,9 @@ async function generateSingleToken(modelName: string): Promise<TokenPoolEntry> {
 
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}))
+    if (resp.status === 402) {
+      throw { noCredits: true, modelName }
+    }
     throw new Error(err?.error ?? err?.status ?? `Server error ${resp.status}`)
   }
 

@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+var errNoQuota = errors.New("no quota left")
+
 func (s *Service) GetSignedBlindedTokenHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	user := s.getUserFromContext(ctx)
@@ -23,6 +25,10 @@ func (s *Service) GetSignedBlindedTokenHandler(w http.ResponseWriter, r *http.Re
 
 	resp, err := s.getSignedBlindedToken(ctx, user, req)
 	if err != nil {
+		if errors.Is(err, errNoQuota) {
+			render.Render(w, r, ErrPaymentRequired(err))
+			return
+		}
 		render.Render(w, r, ErrInternal(err))
 		return
 	}
@@ -66,7 +72,7 @@ func (s *Service) getSignedBlindedToken(ctx context.Context, user *models.User, 
 	currActive := user.SubscriptionInfo.ActiveAuthTokens[req.ModelName]
 	currUsed := user.SubscriptionInfo.UsedAuthTokens[req.ModelName]
 	if currActive <= 0 {
-		return nil, errors.New("no quota left")
+		return nil, errNoQuota
 	}
 	currActive--
 	currUsed++

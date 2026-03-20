@@ -191,8 +191,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       const aiMsg = llmResp.data.choices[0].message.content as string
       onSendMessage(aiMsg, 'assistant')
-    } catch (e) {
-      showError(`Error: ${JSON.stringify(e)}`, e)
+    } catch (e: any) {
+      if (e?.noCredits) {
+        showError(
+          `You have no credits remaining for ${selectedModel}. Purchase more credits to continue.`
+        )
+      } else {
+        showError(`Error: ${JSON.stringify(e)}`, e)
+      }
     } finally {
       setLoadingState({ isLoading: false, message: '' })
     }

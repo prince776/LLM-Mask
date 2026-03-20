@@ -71,3 +71,12 @@ func ErrNotFound() render.Renderer {
 		StatusText:     "Resource not found.",
 	}
 }
+
+func ErrPaymentRequired(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: http.StatusPaymentRequired,
+		StatusText:     "No credits remaining.",
+		ErrorText:      err.Error(),
+	}
+}

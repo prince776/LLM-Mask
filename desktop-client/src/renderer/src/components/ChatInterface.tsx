@@ -154,6 +154,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         modelName: selectedModel
       })
       if (blindedToken.error) {
+        if (blindedToken.error?.noCredits) {
+          showError(
+            `You have no credits remaining for ${selectedModel}. Purchase more credits to continue.`
+          )
+          return
+        }
         throw blindedToken.error
       }
 

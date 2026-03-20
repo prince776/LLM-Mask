@@ -133,6 +133,9 @@ async function generateSingleToken(modelName: string): Promise<GenerateTokenResp
   if (!resp.ok) {
     const errorData = await resp.json()
     log.info('failed to get signed blinded token', errorData)
+    if (resp.status === 402) {
+      throw { noCredits: true, modelName }
+    }
     throw errorData
   }
 
