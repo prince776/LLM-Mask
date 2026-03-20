@@ -1,91 +1,120 @@
-# CLAUDE.md
+# CLAUDE.md — desktop-client
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## What This Is
-
-**llmtor** — an Electron desktop app that routes LLM API requests through the Tor network for anonymous AI interactions. It uses RSA Blind Signatures (via `@cloudflare/blindrsa-ts`) so the backend server cannot link a token to the user who requested it, then proxies LLM calls (OpenAI-compatible API) over Tor.
+Electron + React desktop app for LLM-Tor. Routes all LLM requests through a bundled Tor binary (SOCKS5) and uses RSA blind signatures for unlinkability. Auth tokens and abuse tokens are managed in the main process via `electron-store`.
 
 ## Commands
 
 ```bash
-# Install dependencies
+# Install
 npm install
 
 # Development (hot reload)
 npm run dev
 
-# Type checking
-npm run typecheck
+# Type checking (run both)
+npm run typecheck:node
+npm run typecheck:web
 
-# Linting
+# Lint
 npm run lint
 
 # Format
 npm run format
 
-# Build (no packaging)
-npm run build
+# Build without packaging
+npm run build:unpack
 
-# Platform-specific packaged builds (handles tor binary staging automatically)
+# Platform-specific packaged builds (handles Tor binary staging)
 ./dist.sh mac arm      # macOS Apple Silicon
 ./dist.sh mac x64      # macOS Intel
 ./dist.sh linux x64    # Linux x64
 ./dist.sh windows x64  # Windows x64
 ```
 
-There are no automated tests in this project.
+No automated tests.
 
 ## Architecture
 
-### Process Structure (Electron)
+### Process structure
 
 Three separate build targets compiled by `electron-vite`:
 
-- **`src/main/`** — Node.js main process. Owns all privileged operations.
-- **`src/preload/`** — Preload script. Bridges main ↔ renderer via `contextBridge`.
-- **`src/renderer/src/`** — React UI (runs in sandboxed browser context, no Node access).
-- **`src/types/`** — Shared TypeScript types used by all three layers.
+- **`src/main/`** — Node.js main process. All privileged operations live here.
+- **`src/preload/`** — Bridges main ↔ renderer via `contextBridge`.
+- **`src/renderer/src/`** — React 19 SPA (sandboxed, no Node access).
+- **`src/types/`** — Shared TypeScript types used across all three layers.
 
-### IPC Flow
+### IPC channels
 
-The renderer never calls Node APIs directly. All privileged operations go through:
+Renderer → main (`ipcRenderer.invoke` / `ipcMain.handle`):
 
-1. `window.api.<method>()` (defined in `src/preload/index.ts`)
-2. `ipcRenderer.invoke(channel, data)` → crosses the process boundary
-3. `ipcMain.handle(channel, handler)` in `src/main/index.ts`
+| Channel | Description |
+|---|---|
+| `generate-token` | Fetch (or refill) a blind-signed token for a model |
+| `llm-proxy` | Send a Tor-routed LLM request with token + abuse tokens |
+| `start-auth` | Open OAuth popup window |
+| `start-purchase` | Open Paddle purchase window |
+| `setup-abuse-tokens` | First-time permanent + transient abuse token issuance |
+| `refresh-transient-abuse-token` | Monthly renewal of transient abuse token |
+| `restore-abuse-token-backup` | Restore from local file or server |
+| `get-abuse-token-status` | Check current abuse token state |
 
-Key IPC channels: `generate-token`, `llm-proxy`, `start-auth`, `start-purchase`, `get-tor-status`.
-Main→renderer events: `tor-setup-begin`, `tor-ready`, `auth-window-closed`.
+Main → renderer events: `tor-setup-begin`, `tor-ready`, `auth-window-closed`.
 
-### Privacy Mechanism (Blind Signatures)
+### Key source files
 
-When a user sends a message:
-1. Renderer calls `generate-token` IPC → main process
-2. Main checks the token pool (`electron-store`, key `_tokenPool.<modelName>`) — pool size target is 5
-3. If pool has tokens, one is consumed; if low, background prefetch is triggered
-4. A token is a UUID blinded with the model's RSA public key (in `src/types/config.ts`), sent to the server for signing, then unblinded — the server signs without seeing the actual token
-5. Token + signed token are sent with the LLM request to `SERVER_URL/api/v1/llm-proxy`
-6. The LLM request travels over Tor via a custom `fetch` implementation that uses `net.request` through a SOCKS5 proxy on port 9050
+| File | Role |
+|---|---|
+| `src/main/index.ts` | App lifecycle, window management, all IPC handlers, OAuth capture server (port 5139) |
+| `src/main/torproxy.ts` | Spawn + monitor bundled Tor binary; fail fast if bootstrap times out |
+| `src/main/llmproxy.ts` | Tor-routed LLM requests (SOCKS5 via `net.request`, dedicated `persist:tor-session` partition) |
+| `src/main/rsa.ts` | Blind RSA token generation (`@cloudflare/blindrsa-ts`); token pool in `electron-store` |
+| `src/main/abuse-token.ts` | Abuse token generation, PBKDF2/AES-GCM backup encryption, electron-store persistence, server backup upload/download |
+| `src/main/local-store.ts` | `electron-store` singleton (`getStore()`) |
+| `src/main/utils.ts` | `getCookieHeader()` and other shared utilities |
+| `src/types/config.ts` | `SERVER_URL`, per-model RSA public keys, `AbuseTokenPublicKeys` |
+| `src/types/models.ts` | `MODEL_IDS` / `AVAILABLE_MODEL_IDS` — single source of truth |
 
-### Tor Integration
+### Token pool (`src/main/rsa.ts`)
 
-- Tor binary bundled in `prod-deps/tor-dist/<platform-arch>/tor/tor[.exe]`
-- `prod-deps-all/` holds binaries for all platforms; `dist.sh` copies the right one to `prod-deps/` before packaging
-- On app start: `startTorProxy()` spawns the binary, `waitForTor()` polls stdout for `"Bootstrapped 100%"` with a 30-second timeout
-- All LLM proxy calls use `doTorProxiedRequest()` which routes through `socks5://127.0.0.1:9050` using a dedicated Electron session partition (`persist:tor-session`)
-- The app exits with code 1 if Tor fails to bootstrap
+- Stored in `electron-store` under `_tokenPool.<modelName>`.
+- Pool target: 5 tokens per model; background refill triggers when ≤ 2 remain.
+- Helpers: `uint8ArrayToBase64` / `base64ToUint8Array`.
 
-### Auth Flow
+### Tor integration (`src/main/torproxy.ts`)
 
-Auth uses a popup BrowserWindow + local HTTP server on port 5139:
-1. Main opens `authWindow` → loads `SERVER_URL/api/v1/users/signin?redirect=http://127.0.0.1:5139/callback`
-2. Server redirects back to local server after sign-in
-3. Cookies are stored in the shared `persist:app` partition
-4. Main window reloads; `auth-window-closed` IPC event triggers renderer to refetch user profile
+- Binary location: `prod-deps/tor-dist/<platform-arch>/tor/tor[.exe]`
+- All platforms' binaries in `prod-deps-all/`; `dist.sh` copies the right one before packaging.
+- Startup: `startTorProxy()` spawns binary → `waitForTor()` polls stdout for `"Bootstrapped 100%"` (30 s timeout).
+- App exits with code 1 if Tor fails to bootstrap.
+- LLM requests use `doTorProxiedRequest()` via `socks5://127.0.0.1:9050`.
 
-### Key Configuration
+### Auth flow
 
-- **`src/types/config.ts`**: `SERVER_URL` (default `http://localhost:8080`) and per-model RSA public keys used for blind signature verification
-- **`src/types/models.ts`**: `MODEL_IDS` and `AVAILABLE_MODEL_IDS` — single source of truth for supported models
-- Chat history persists in `localStorage` (renderer); token pool persists in `electron-store` (main)
+1. `start-auth` IPC → main opens `authWindow` → `SERVER_URL/api/v1/users/signin?redirect=http://127.0.0.1:5139/callback`
+2. Local HTTP server on port 5139 captures OAuth callback.
+3. Session cookies stored in `persist:app` partition.
+4. Main window reloads; `auth-window-closed` event triggers renderer to re-fetch user profile.
+
+### Abuse token system (`src/main/abuse-token.ts`)
+
+Every anonymous LLM request includes two long-lived blind-signed abuse tokens alongside the per-request token:
+
+| Token | Size | Validity |
+|---|---|---|
+| Permanent (`A_p`) | 48 random bytes | Account lifetime |
+| Transient (`A_t`) | 44 random bytes + 4-byte big-endian epoch | One calendar month |
+
+- Epoch = `year × 12 + month` (1-indexed).
+- Backup encryption: PBKDF2(SHA-256, 600k iterations) → AES-256-GCM; format: `base64(salt‖IV‖ciphertext)`.
+- Always exported as a local `.llmmaskbak` file; server sync is opt-in.
+- Restoration: from local file (primary) or server (only if previously synced).
+
+### Startup sequence
+
+App starts → Tor initializes (`tor-setup-begin` event) → tokens prefetched for all models → Tor ready (`tor-ready` event) → UI shown.
+
+### Key configuration (`src/types/config.ts`)
+
+- `SERVER_URL`: `http://localhost:8080` (dev) / production URL in built app.
+- Per-model RSA public keys and `AbuseTokenPublicKeys` are hardcoded (fetched from server at build/deploy time).

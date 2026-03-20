@@ -521,75 +521,40 @@ function startPurchaseFlow(payload: {
   dodoProductID: string
   userID: string
 }): void {
-  const redirectUri = `http://127.0.0.1:${REDIRECT_PORT}/callback`
-  let serverClosed = false
+  // Use the backend's own payment callback page as the return URL so Dodo can
+  // reach it (localhost:5139 is not publicly accessible and causes "Failed to
+  // confirm session" in Dodo's checkout confirmation step).
+  const redirectUri = `${SERVER_URL}/payment/callback`
+  const { transientToken, dodoProductID, userID } = payload
+  const purchaseUrl = `${SERVER_URL}/api/v1/purchase?transientToken=${encodeURIComponent(
+    transientToken
+  )}&dodoProductID=${encodeURIComponent(dodoProductID)}&userID=${encodeURIComponent(
+    userID
+  )}&redirectURL=${encodeURIComponent(redirectUri)}`
 
-  // Create local server to capture redirect
-  const server = createServer((req, res) => {
-    if (req.url?.startsWith('/callback')) {
-      res.writeHead(200, { 'Content-Type': 'text/html' })
-      res.end('<h1>Purchase flow completed. You can close this window.</h1>')
-
-      if (authWindow) {
-        authWindow.close()
-        authWindow = null
-      }
-
-      // Reload main window (cookies are already saved in default session)
-      if (mainWindow) {
-        if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-          mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-        } else {
-          mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-        }
-      }
-
-      if (!serverClosed) {
-        serverClosed = true
-        server.close()
-      }
-    } else {
-      res.writeHead(404)
-      res.end()
+  authWindow = new BrowserWindow({
+    width: 700,
+    height: 800,
+    parent: mainWindow ?? undefined,
+    webPreferences: {
+      nodeIntegration: false,
+      partition: 'persist:app',
+      enableBlinkFeatures: 'CSSBackdropFilter',
+      offscreen: false,
+      webSecurity: true,
+      contextIsolation: true
     }
   })
 
-  server.listen(REDIRECT_PORT, () => {
-    const { transientToken, dodoProductID, userID } = payload
-    const purchaseUrl = `${SERVER_URL}/api/v1/purchase?transientToken=${encodeURIComponent(
-      transientToken
-    )}&dodoProductID=${encodeURIComponent(dodoProductID)}&userID=${encodeURIComponent(
-      userID
-    )}&redirectURL=${encodeURIComponent(redirectUri)}`
-
-    // Popup window for purchase
-    authWindow = new BrowserWindow({
-      width: 700,
-      height: 800,
-      parent: mainWindow ?? undefined,
-      webPreferences: {
-        nodeIntegration: false,
-        partition: 'persist:app', // ✅ shared partition
-        enableBlinkFeatures: 'CSSBackdropFilter',
-        offscreen: false,
-        webSecurity: true,
-        contextIsolation: true
-      }
-    })
-
-    // Close server when window is closed without completing the flow
-    authWindow.on('closed', () => {
-      if (!serverClosed) {
-        serverClosed = true
-        server.close()
-      }
-      // Notify renderer to refetch user after purchase window closes
-      if (mainWindow) {
-        mainWindow.webContents.send('auth-window-closed')
-      }
-      authWindow = null
-    })
-
-    authWindow.loadURL(purchaseUrl)
+  // When the window closes (either the user closes it or window.close() fires
+  // from the payment callback page), notify the renderer to refetch the user
+  // so the updated token balance is shown.
+  authWindow.on('closed', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('auth-window-closed')
+    }
+    authWindow = null
   })
+
+  authWindow.loadURL(purchaseUrl)
 }

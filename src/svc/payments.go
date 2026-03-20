@@ -36,6 +36,15 @@ func (s *Service) getPackageForProductID(productID string) *common.ModelTokenPac
 	return nil
 }
 
+func (s *Service) PaymentCallbackHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`<!DOCTYPE html><html><head><title>Payment Complete</title></head><body>
+<script>window.close();</script>
+<p>Payment complete. You can close this window.</p>
+</body></html>`))
+}
+
 func (s *Service) PurchaseHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := r.URL.Query().Get("userID")
@@ -60,6 +69,7 @@ func (s *Service) PurchaseHandler(w http.ResponseWriter, r *http.Request) {
 	expectedTransientToken := s.getTransientUserToken(userID)
 	if expectedTransientToken != transientToken {
 		render.Render(w, r, ErrUnauthorized(errors.New("transient token does not match")))
+		return
 	}
 
 	dodoCreds := common.PlatformCredsConfig().DodoPaymentsCreds
