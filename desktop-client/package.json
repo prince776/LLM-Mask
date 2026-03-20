@@ -20,6 +20,9 @@
     "build:mac": "electron-vite build && electron-builder --mac",
     "build:linux": "electron-vite build && electron-builder --linux"
   },
+  "engines": {
+    "node": ">=24"
+  },
   "dependencies": {
     "@cloudflare/blindrsa-ts": "^0.4.4",
     "@electron-toolkit/preload": "^3.0.2",
